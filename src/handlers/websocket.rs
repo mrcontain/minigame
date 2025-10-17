@@ -14,8 +14,11 @@ use http::StatusCode;
 use serde_json::json;
 use tracing::{debug, error, info};
 
-use crate::dto::{JoinRoomRequest, MessageResponse};
 use crate::{AppState, Player};
+use crate::{
+    Car,
+    dto::{JoinRoomRequest, MessageResponse},
+};
 
 // WebSocket处理函数
 pub async fn websocket_handler(
@@ -116,14 +119,26 @@ async fn handle_websocket(
     state: AppState,
 ) {
     let mut room_info = match state.inner.room_info.get_mut(&room_id) {
-        Some(room) => room.clone(),
+        Some(room) => room,
         None => {
             error!("房间不存在");
             return;
         }
     };
+
+    room_info.players.push(Player {
+        player_id,
+        player_name: player_name.clone(),
+        car_id,
+        weather_id,
+        background_id,
+    });
+    room_info.cars.push(Car {
+        car_id,
+        player_ids: vec![player_id],
+    });
     let first_json = json!({
-        "room_info": room_info,
+        "room_info": room_info.clone(),
     });
     if socket
         .send(Message::Text(first_json.to_string().into()))
@@ -133,13 +148,6 @@ async fn handle_websocket(
         error!("发送欢迎消息失败");
         return;
     }
-    room_info.players.push(Player {
-        player_id,
-        player_name: player_name.clone(),
-        car_id,
-        weather_id,
-        background_id,
-    });
     // 获取广播通道
     let (tx, mut rx) = match state.inner.room_broadcast_couple.get(&room_id) {
         Some(room) => (room.0.clone(), room.1.resubscribe()),

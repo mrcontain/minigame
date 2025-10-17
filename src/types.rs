@@ -6,9 +6,16 @@ use tokio::sync::broadcast;
 pub struct Room {
     pub room_id: i32,
     pub players: Vec<Player>,
-    pub car_id: i32,
+    pub cars: Vec<Car>,
     pub weather_id: i32,
     pub background_id: i32,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+
+pub struct Car {
+    pub car_id: i32,
+    pub player_ids:Vec<i32>
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]

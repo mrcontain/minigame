@@ -14,7 +14,7 @@ POST {{baseUrl}}/create
 Content-Type: application/json
 
 {
-  "player_id": "xxx1",
+  "player_id": 1,
   "player_name": "玩家一",
   "car_id": 101,
   "weather_id": 1,

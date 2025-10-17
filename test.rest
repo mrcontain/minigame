@@ -2,8 +2,8 @@
 # 注意：WebSocket 需要使用支持 WebSocket 的 REST 客户端
 # 或者使用专门的 WebSocket 测试工具（如 websocat, wscat）
 
-@baseUrl = http://localhost:7777
-@wsUrl = ws://localhost:7777
+@baseUrl = http://192.168.216.182:7777
+@wsUrl = ws://192.168.216.182:7777
 
 ###############################################
 # 房间管理接口
@@ -14,7 +14,7 @@ POST {{baseUrl}}/create
 Content-Type: application/json
 
 {
-  "player_id": 1,
+  "player_id": "xxx1",
   "player_name": "玩家一",
   "car_id": 101,
   "weather_id": 1,

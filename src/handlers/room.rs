@@ -1,6 +1,7 @@
 use axum::{extract::State, response::IntoResponse};
 use http::StatusCode;
 use serde::Deserialize;
+use serde_json::json;
 use tokio::sync::broadcast;
 
 use crate::{AppState, Player, Room};
@@ -43,5 +44,10 @@ pub async fn create_room(
         let (tx, rx) = broadcast::channel(100);
         state.inner.room_broadcast_couple.insert(room_id, (tx, rx));
     }
-    (StatusCode::OK, "房间创建成功").into_response()
+    // 返回json
+    let json = json!({
+        "room_id": room_id,
+        "content": "房间创建成功",
+    });
+    (StatusCode::OK, Json(json)).into_response()
 }

@@ -7,23 +7,9 @@ use tracing_subscriber::{fmt::Layer, prelude::*};
 async fn main() -> Result<()> {
     let layer = Layer::new().pretty().with_filter(LevelFilter::DEBUG);
 
-    //output the error logs to the error.log
-    // and only the info logs and warn logs to the oxideleap.log
-    let filter_appender = rolling::daily("logs", "oxideleap.log");
-    let (non_blocking, _guard1) = tracing_appender::non_blocking(filter_appender);
-    let filter_layer = Layer::new()
-        .with_writer(non_blocking)
-        .with_filter(LevelFilter::INFO);
-    let error_appender = rolling::daily("logs", "error.log");
-    let (non_blocking, _guard2) = tracing_appender::non_blocking(error_appender);
-    let error_layer = Layer::new()
-        .with_writer(non_blocking)
-        .with_filter(LevelFilter::ERROR);
 
     tracing_subscriber::registry()
         .with(layer)
-        .with(filter_layer)
-        .with(error_layer)
         .init();
     // 加载配置
     let config = match Config::try_load() {

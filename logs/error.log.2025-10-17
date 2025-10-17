@@ -1,0 +1,10 @@
+[2m2025-10-17T09:46:22.985676Z[0m [31mERROR[0m [2mminigame::handlers::websocket[0m[2m:[0m 房间不存在
+[2m2025-10-17T09:46:34.955589Z[0m [31mERROR[0m [2mminigame::handlers::websocket[0m[2m:[0m 房间不存在
+[2m2025-10-17T09:47:18.724264Z[0m [31mERROR[0m [2mminigame::handlers::websocket[0m[2m:[0m 房间不存在
+[2m2025-10-17T09:47:57.753309Z[0m [31mERROR[0m [2mminigame::handlers::websocket[0m[2m:[0m 房间不存在: 1
+[2m2025-10-17T09:48:12.355504Z[0m [31mERROR[0m [2mminigame::handlers::websocket[0m[2m:[0m 房间不存在: 1
+[2m2025-10-17T09:52:15.631880Z[0m [31mERROR[0m [2mminigame::handlers::websocket[0m[2m:[0m 房间不存在: 1
+[2m2025-10-17T10:21:53.162082Z[0m [31mERROR[0m [2mminigame::handlers::websocket[0m[2m:[0m 缺少player_name参数
+[2m2025-10-17T10:22:40.894356Z[0m [31mERROR[0m [2mminigame::handlers::websocket[0m[2m:[0m 缺少player_name参数
+[2m2025-10-17T10:23:04.769768Z[0m [31mERROR[0m [2mminigame::handlers::websocket[0m[2m:[0m 房间广播pipeline不存在: 1
+[2m2025-10-17T10:23:41.992030Z[0m [31mERROR[0m [2mminigame::handlers::websocket[0m[2m:[0m 房间广播pipeline不存在: 1

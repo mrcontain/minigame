@@ -1,0 +1,104 @@
+### WebSocket 和房间管理测试
+# 注意：WebSocket 需要使用支持 WebSocket 的 REST 客户端
+# 或者使用专门的 WebSocket 测试工具（如 websocat, wscat）
+
+@baseUrl = http://localhost:7777
+@wsUrl = ws://localhost:7777
+
+###############################################
+# 房间管理接口
+###############################################
+
+### 测试1: 创建房间1（玩家1）
+POST {{baseUrl}}/create
+Content-Type: application/json
+
+{
+  "player_id": 1,
+  "player_name": "玩家一",
+  "car_id": 101,
+  "weather_id": 1,
+  "background_id": 1
+}
+
+### 测试2: 创建房间2（玩家2）
+POST {{baseUrl}}/create
+Content-Type: application/json
+
+{
+  "player_id": 2,
+  "player_name": "玩家二",
+  "car_id": 102,
+  "weather_id": 2,
+  "background_id": 2
+}
+
+### 测试3: 尝试重复创建房间1（应该返回 400 错误）
+POST {{baseUrl}}/create
+Content-Type: application/json
+
+{
+  "player_id": 1,
+  "player_name": "玩家一",
+  "car_id": 101,
+  "weather_id": 1,
+  "background_id": 1
+}
+
+###############################################
+# WebSocket 连接测试
+###############################################
+
+### 测试4: 玩家1加入房间1
+# GET {{wsUrl}}/ws?player_id=1&room_id=1
+# Connection: Upgrade
+# Upgrade: websocket
+
+### 测试5: 玩家2加入房间1
+# GET {{wsUrl}}/ws?player_id=2&room_id=1
+# Connection: Upgrade
+# Upgrade: websocket
+
+### 测试6: 玩家3加入房间2
+# GET {{wsUrl}}/ws?player_id=3&room_id=2
+# Connection: Upgrade
+# Upgrade: websocket
+
+### 测试7: 缺少 player_id 参数（应该返回 400 错误）
+GET {{baseUrl}}/ws?room_id=1
+Accept: */*
+
+### 测试8: 缺少 room_id 参数（应该返回 400 错误）
+GET {{baseUrl}}/ws?player_id=1
+Accept: */*
+
+### 测试9: player_id 格式错误（应该返回 400 错误）
+GET {{baseUrl}}/ws?player_id=abc&room_id=1
+Accept: */*
+
+### 测试10: room_id 格式错误（应该返回 400 错误）
+GET {{baseUrl}}/ws?player_id=1&room_id=xyz
+Accept: */*
+
+###############################################
+# WebSocket 消息格式说明
+###############################################
+# 
+# 1. 连接成功后，服务器会发送初始房间信息：
+# {
+#   "room_info": { ... }
+# }
+#
+# 2. 客户端发送消息格式：
+# {
+#   "player_id": 1,
+#   "content": "你的消息内容"
+# }
+#
+# 3. 服务器广播消息格式：
+# {
+#   "player_id": 1,
+#   "content": "消息内容"
+# }
+#
+###############################################

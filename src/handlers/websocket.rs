@@ -502,7 +502,15 @@ pub async fn handle_broadcast_to_ws(
                                 }
                             };
                             room_info.players.remove(player.player_id as usize);
-                            room_info.cars.remove(player.car_id as usize);
+                            match room_info.cars.get_mut(player.car_id as usize) {
+                                Some(car) => {
+                                    car.player_ids.remove(player.player_id as usize);
+                                }
+                                None => {
+                                    error!("❌ [broadcast_to_ws] 车辆不存在");
+                                    continue;
+                                }
+                            };
                             match tx.send(MessageType::Sync(room_info.clone())) {
                                 Ok(_) => {
                                     debug!("✅ [broadcast_to_ws] 同步消息广播成功");

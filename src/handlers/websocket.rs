@@ -282,7 +282,13 @@ async fn handle_websocket(
     debug!("📢 [handle_websocket] 准备广播登录消息: {}", content);
 
     // 群发信息 - 启动接收任务
-    let ws_to_broadcast = tokio::spawn(handle_ws_to_broadcast(ws_stream, tx));
+    let ws_to_broadcast = tokio::spawn(handle_ws_to_broadcast(
+        ws_stream,
+        tx,
+        room_id,
+        player_id,
+        state.clone(),
+    ));
     let room_info_clone = room_info.clone();
     drop(room_info);
     // 监听broadcast pipeline如果收到消息则发送给客户端 - 启动发送任务
@@ -318,6 +324,9 @@ async fn handle_websocket(
 pub async fn handle_ws_to_broadcast(
     mut ws_stream: futures::stream::SplitStream<WebSocket>,
     tx: tokio::sync::broadcast::Sender<MessageType>,
+    room_id: i32,
+    player_id: i32,
+    state: AppState,
 ) {
     debug!("🚀 [ws_to_broadcast] 启动 WebSocket 接收任务");
 
@@ -400,6 +409,25 @@ pub async fn handle_ws_to_broadcast(
             }
             Message::Close(close_frame) => {
                 debug!("📨 [ws_to_broadcast] 收到关闭消息: {:?}", close_frame);
+                if room_id == player_id {
+                    let room_info = match (*state).room_info.get(&room_id) {
+                        Some(room) => room,
+                        None => {
+                            error!("❌ [ws_to_broadcast] 房间不存在");
+                            continue;
+                        }
+                    };
+                    room_info.players.iter().for_each(|player| {
+                        match tx.send(MessageType::Quit(player.player_id, room_id)) {
+                            Ok(_) => {
+                                debug!("✅ [ws_to_broadcast] 退出消息广播成功");
+                            }
+                            Err(e) => {
+                                error!("❌ [ws_to_broadcast] 退出消息广播失败:  错误: {e}");
+                            }
+                        };
+                    });
+                }
                 break;
             }
             Message::Binary(binary) => {

@@ -228,17 +228,18 @@ async fn handle_websocket(
                     }
                 },
                 Err(e) => {
-                    if let tokio::sync::broadcast::error::RecvError::Closed = e {
-                        debug!("SSH通道已关闭");
-                        let close_frame = Message::Close(Some(axum::extract::ws::CloseFrame {
-                            code: 1008,
-                            reason: "inactivetimeout".into(),
-                        }));
-                        if ws_sink.send(close_frame).await.is_err() {
-                            error!("关闭帧发送失败");
-                        }
-                        break;
-                    }
+                    // if let tokio::sync::broadcast::error::RecvError::Closed = e {
+                    //     debug!("SSH通道已关闭");
+                    //     let close_frame = Message::Close(Some(axum::extract::ws::CloseFrame {
+                    //         code: 1008,
+                    //         reason: "inactivetimeout".into(),
+                    //     }));
+                    //     if ws_sink.send(close_frame).await.is_err() {
+                    //         error!("关闭帧发送失败");
+                    //     }
+                    //     break;
+                    // }
+                    error!("发生错误{e}");
                 }
             }
         }

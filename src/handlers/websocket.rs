@@ -502,15 +502,10 @@ pub async fn handle_broadcast_to_ws(
                                 }
                             };
                             room_info.players.retain(|p| p.player_id != quit_player_id);
-                            match room_info.cars.get_mut(player.car_id as usize) {
-                                Some(car) => {
-                                    car.player_ids.retain(|id| *id != quit_player_id);
-                                }
-                                None => {
-                                    error!("❌ [broadcast_to_ws] 车辆不存在");
-                                    continue;
-                                }
-                            };
+                            room_info.cars.retain(|c| c.car_id != player.car_id);
+                            room_info.cars.iter_mut().for_each(|c| {
+                                c.player_ids.retain(|id| *id != quit_player_id);
+                            });
                             match tx.send(MessageType::Sync(room_info.clone())) {
                                 Ok(_) => {
                                     debug!("✅ [broadcast_to_ws] 同步消息广播成功");

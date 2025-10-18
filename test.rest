@@ -109,6 +109,6 @@ POST {{baseUrl}}/quitroom
 Content-Type: application/json
 
 {
-  "player_id": 2,
+  "player_id": 1,
   "room_id": 1
 }

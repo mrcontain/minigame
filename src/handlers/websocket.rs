@@ -149,13 +149,14 @@ async fn handle_websocket(
         return;
     }
     // 获取广播通道
-    let (tx, mut rx) = match state.inner.room_broadcast_couple.get(&room_id) {
-        Some(room) => (room.0.clone(), room.1.resubscribe()),
+    let room = match state.inner.room_broadcast_couple.get(&room_id) {
+        Some(room) => room,
         None => {
             error!("房间广播pipeline不存在: {}", room_id);
             return;
         }
     };
+    let tx = room.0.clone();
     let tx_clone = tx.clone();
     // 分离WebSocket发送和接收
     let (mut ws_sink, mut ws_stream) = socket.split();
@@ -200,16 +201,13 @@ async fn handle_websocket(
     // 监听broadcast pipeline如果收到消息则发送给客户端
     let broadcast_to_ws = tokio::spawn(async move {
         // 通知所有用户已登录
-        let login_json = json!({
-            "player_id": player_id,
-            "content": "登录成功",
-        });
         match tx_clone.send(MessageResponse { player_id, content }) {
             Ok(_) => {}
             Err(_) => {
                 error!("发送登录消息失败");
             }
         }
+        let mut rx = tx_clone.subscribe();
         loop {
             match rx.recv().await {
                 Ok(data) => match data {

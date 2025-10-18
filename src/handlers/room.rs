@@ -48,6 +48,7 @@ pub async fn create_room(
         let (tx, rx) = broadcast::channel(100);
         state.inner.room_broadcast_couple.insert(room_id, (tx, rx));
     }
+    
     // 返回json
     let json = json!({
         "room_id": room_id,

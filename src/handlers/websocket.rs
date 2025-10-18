@@ -188,6 +188,13 @@ async fn handle_websocket(
         "🎯 [handle_websocket] 进入 WebSocket 处理函数 - player_id: {}, room_id: {}, player_name: {}",
         player_id, room_id, player_name
     );
+    let player = Player {
+        player_id,
+        player_name: player_name.clone(),
+        car_id,
+        weather_id,
+        background_id,
+    };
     let first_json = {
         debug!(
             "🔍 [handle_websocket] 正在获取房间信息 - room_id: {}",
@@ -206,15 +213,8 @@ async fn handle_websocket(
                 return;
             }
         };
-
         debug!("📝 [handle_websocket] 添加玩家到房间");
-        room_info.players.push(Player {
-            player_id,
-            player_name: player_name.clone(),
-            car_id,
-            weather_id,
-            background_id,
-        });
+        room_info.players.push(player.clone());
         debug!(
             "✅ [handle_websocket] 玩家添加成功，当前房间玩家数: {}",
             room_info.players.len()
@@ -285,7 +285,11 @@ async fn handle_websocket(
 
     // 监听broadcast pipeline如果收到消息则发送给客户端 - 启动发送任务
     let broadcast_to_ws = tokio::spawn(handle_broadcast_to_ws(
-        ws_sink, tx_clone, player_id, content,
+        ws_sink,
+        tx_clone,
+        player,
+        content,
+        state.clone(),
     ));
 
     // 等待任一任务结束
@@ -393,20 +397,18 @@ pub async fn handle_ws_to_broadcast(
 pub async fn handle_broadcast_to_ws(
     mut ws_sink: futures::stream::SplitSink<WebSocket, Message>,
     tx: tokio::sync::broadcast::Sender<MessageType>,
-    player_id: i32,
+    player: Player,
     content: String,
+    state: AppState,
 ) {
     debug!("🚀 [broadcast_to_ws] 启动广播监听任务");
 
-    // 通知所有用户已登录
+    // 通知所有用户同步状态
     debug!(
         "📢 [broadcast_to_ws] 准备发送登录通知 - player_id: {}, content: {}",
-        player_id, content
+        player.player_id, content
     );
-    match tx.send(MessageType::Text(MessageResponse {
-        player_id,
-        content: content.clone(),
-    })) {
+    match tx.send(MessageType::Sync) {
         Ok(_) => {
             debug!("✅ [broadcast_to_ws] 登录消息广播成功");
         }
@@ -464,6 +466,52 @@ pub async fn handle_broadcast_to_ws(
                             error!("❌ [broadcast_to_ws] WebSocket 发送消息失败 - 错误: {}", e);
                         } else {
                             debug!("✅ [broadcast_to_ws] 消息发送成功");
+                        }
+                    }
+                    MessageType::Sync => {
+                        debug!("同步状态");
+                        let json_msg = json!({
+                            "type": "sync",
+                            "content": content,
+                        });
+                        debug!(
+                            "📤 [broadcast_to_ws] 准备发送消息到 WebSocket: {:?}",
+                            json_msg
+                        );
+                        if let Err(e) = ws_sink
+                            .send(Message::Text(json_msg.to_string().into()))
+                            .await
+                        {
+                            error!("❌ [broadcast_to_ws] WebSocket 发送消息失败 - 错误: {}", e);
+                        } else {
+                            debug!("✅ [broadcast_to_ws] 消息发送成功");
+                        }
+                    }
+                    MessageType::Quit(quit_player_id, room_id) => {
+                        debug!("🛑 [broadcast_to_ws] 收到退出消息");
+                        if quit_player_id == player.player_id {
+                            debug!("🛑 [broadcast_to_ws] 自己退出房间");
+                            let mut room_info = match state.inner.room_info.get_mut(&room_id) {
+                                Some(room) => room,
+                                None => {
+                                    error!("❌ [broadcast_to_ws] 房间不存在");
+                                    continue;
+                                }
+                            };
+                            room_info.players.remove(player.player_id as usize);
+                            room_info.cars.remove(player.car_id as usize);
+                            match tx.send(MessageType::Sync) {
+                                Ok(_) => {
+                                    debug!("✅ [broadcast_to_ws] 同步消息广播成功");
+                                }
+                                Err(e) => {
+                                    error!("❌ [broadcast_to_ws] 同步消息广播失败 - 错误: {}", e);
+                                }
+                            };
+                            break;
+                        } else {
+                            debug!("🛑 [broadcast_to_ws] 其他玩家退出房间");
+                            continue;
                         }
                     }
                 };

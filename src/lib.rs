@@ -53,7 +53,7 @@ pub fn get_route(state: AppState) -> Router {
     
     Router::new()
         .route("/ws", get(handlers::websocket_handler))
-        .route("/create", post(create_room))
+        .route("/createroom", post(create_room))
         .layer(cors)
         .with_state(state)
 }

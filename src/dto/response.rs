@@ -9,4 +9,6 @@ pub struct MessageResponse {
 pub enum MessageType {
     Text(MessageResponse),
     Emoji(MessageResponse),
+    Sync,
+    Quit(i32,i32)
 }

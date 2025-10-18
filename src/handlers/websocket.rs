@@ -9,6 +9,7 @@ use axum::{
 };
 use futures::{SinkExt, StreamExt};
 use http::StatusCode;
+use log::info;
 use serde_json::json;
 use tracing::{debug, error};
 
@@ -509,6 +510,14 @@ pub async fn handle_broadcast_to_ws(
                             match tx.send(MessageType::Sync(room_info.clone())) {
                                 Ok(_) => {
                                     debug!("✅ [broadcast_to_ws] 同步消息广播成功");
+                                    let close_frame = Message::Close(Some(axum::extract::ws::CloseFrame {
+                                        code: 1000, // 正常关闭
+                                        reason: "User quit".into(),
+                                    }));
+                                    if ws_sink.send(close_frame).await.is_err() {
+                                        error!("❌ [broadcast_to_ws] 关闭帧发送失败");
+                                    }
+                                    info!("✅ [broadcast_to_ws] 关闭帧发送成功");
                                 }
                                 Err(e) => {
                                     error!("❌ [broadcast_to_ws] 同步消息广播失败 - 错误: {}", e);

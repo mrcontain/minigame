@@ -305,6 +305,12 @@ async fn handle_websocket(
             debug!("🛑 [handle_websocket] broadcast_to_ws 任务已结束");
         },
     }
+    // 清理：从房间中移除玩家
+    if room_id == player_id {
+        (*state).room_info.remove(&room_id);
+        (*state).room_broadcast_couple.remove(&room_id);
+        debug!("🗑️ [handle_websocket] 房间 {} 已清空并删除", room_id);
+    }
     debug!("👋 [handle_websocket] WebSocket 连接处理完成");
 }
 
@@ -402,7 +408,7 @@ pub async fn handle_broadcast_to_ws(
     tx: tokio::sync::broadcast::Sender<MessageType>,
     player: Player,
     content: String,
-    room_info: Room, 
+    room_info: Room,
     state: AppState,
 ) {
     debug!("🚀 [broadcast_to_ws] 启动广播监听任务");
@@ -510,10 +516,11 @@ pub async fn handle_broadcast_to_ws(
                             match tx.send(MessageType::Sync(room_info.clone())) {
                                 Ok(_) => {
                                     debug!("✅ [broadcast_to_ws] 同步消息广播成功");
-                                    let close_frame = Message::Close(Some(axum::extract::ws::CloseFrame {
-                                        code: 1000, // 正常关闭
-                                        reason: "User quit".into(),
-                                    }));
+                                    let close_frame =
+                                        Message::Close(Some(axum::extract::ws::CloseFrame {
+                                            code: 1000, // 正常关闭
+                                            reason: "User quit".into(),
+                                        }));
                                     if ws_sink.send(close_frame).await.is_err() {
                                         error!("❌ [broadcast_to_ws] 关闭帧发送失败");
                                     }

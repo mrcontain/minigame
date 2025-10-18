@@ -501,10 +501,10 @@ pub async fn handle_broadcast_to_ws(
                                     continue;
                                 }
                             };
-                            room_info.players.remove(player.player_id as usize);
+                            room_info.players.retain(|p| p.player_id != quit_player_id);
                             match room_info.cars.get_mut(player.car_id as usize) {
                                 Some(car) => {
-                                    car.player_ids.remove(player.player_id as usize);
+                                    car.player_ids.retain(|id| *id != quit_player_id);
                                 }
                                 None => {
                                     error!("❌ [broadcast_to_ws] 车辆不存在");

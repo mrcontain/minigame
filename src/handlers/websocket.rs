@@ -12,7 +12,7 @@ use http::StatusCode;
 use serde_json::json;
 use tracing::{debug, error};
 
-use crate::{AppState, MessageType, Player};
+use crate::{AppState, MessageType, Player, Room};
 use crate::{Car, dto::MessageResponse};
 
 // WebSocket处理函数
@@ -195,24 +195,24 @@ async fn handle_websocket(
         weather_id,
         background_id,
     };
+    let mut room_info = match state.inner.room_info.get_mut(&room_id) {
+        Some(room) => {
+            debug!(
+                "✅ [handle_websocket] 房间信息获取成功 - room_id: {}",
+                room_id
+            );
+            room
+        }
+        None => {
+            error!("❌ [handle_websocket] 房间不存在 - room_id: {}", room_id);
+            return;
+        }
+    };
     let first_json = {
         debug!(
             "🔍 [handle_websocket] 正在获取房间信息 - room_id: {}",
             room_id
         );
-        let mut room_info = match state.inner.room_info.get_mut(&room_id) {
-            Some(room) => {
-                debug!(
-                    "✅ [handle_websocket] 房间信息获取成功 - room_id: {}",
-                    room_id
-                );
-                room
-            }
-            None => {
-                error!("❌ [handle_websocket] 房间不存在 - room_id: {}", room_id);
-                return;
-            }
-        };
         debug!("📝 [handle_websocket] 添加玩家到房间");
         room_info.players.push(player.clone());
         debug!(
@@ -282,13 +282,15 @@ async fn handle_websocket(
 
     // 群发信息 - 启动接收任务
     let ws_to_broadcast = tokio::spawn(handle_ws_to_broadcast(ws_stream, tx));
-
+    let room_info_clone = room_info.clone();
+    drop(room_info);
     // 监听broadcast pipeline如果收到消息则发送给客户端 - 启动发送任务
     let broadcast_to_ws = tokio::spawn(handle_broadcast_to_ws(
         ws_sink,
         tx_clone,
         player,
         content,
+        room_info_clone,
         state.clone(),
     ));
 
@@ -399,6 +401,7 @@ pub async fn handle_broadcast_to_ws(
     tx: tokio::sync::broadcast::Sender<MessageType>,
     player: Player,
     content: String,
+    room_info: Room, 
     state: AppState,
 ) {
     debug!("🚀 [broadcast_to_ws] 启动广播监听任务");
@@ -408,7 +411,7 @@ pub async fn handle_broadcast_to_ws(
         "📢 [broadcast_to_ws] 准备发送登录通知 - player_id: {}, content: {}",
         player.player_id, content
     );
-    match tx.send(MessageType::Sync) {
+    match tx.send(MessageType::Sync(room_info)) {
         Ok(_) => {
             debug!("✅ [broadcast_to_ws] 登录消息广播成功");
         }
@@ -468,11 +471,11 @@ pub async fn handle_broadcast_to_ws(
                             debug!("✅ [broadcast_to_ws] 消息发送成功");
                         }
                     }
-                    MessageType::Sync => {
+                    MessageType::Sync(room_info) => {
                         debug!("同步状态");
                         let json_msg = json!({
                             "type": "sync",
-                            "content": content,
+                            "room_info": room_info,
                         });
                         debug!(
                             "📤 [broadcast_to_ws] 准备发送消息到 WebSocket: {:?}",
@@ -500,7 +503,7 @@ pub async fn handle_broadcast_to_ws(
                             };
                             room_info.players.remove(player.player_id as usize);
                             room_info.cars.remove(player.car_id as usize);
-                            match tx.send(MessageType::Sync) {
+                            match tx.send(MessageType::Sync(room_info.clone())) {
                                 Ok(_) => {
                                     debug!("✅ [broadcast_to_ws] 同步消息广播成功");
                                 }

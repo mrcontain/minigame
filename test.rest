@@ -10,7 +10,7 @@
 ###############################################
 
 ### 测试1: 创建房间1（玩家1）
-POST {{baseUrl}}/create
+POST {{baseUrl}}/createroom
 Content-Type: application/json
 
 {
@@ -22,7 +22,7 @@ Content-Type: application/json
 }
 
 ### 测试2: 创建房间2（玩家2）
-POST {{baseUrl}}/create
+POST {{baseUrl}}/createroom
 Content-Type: application/json
 
 {
@@ -102,3 +102,13 @@ Accept: */*
 # }
 #
 ###############################################
+
+
+# 测试退出房间
+POST {{baseUrl}}/quitroom
+Content-Type: application/json
+
+{
+  "player_id": 3,
+  "room_id": 1
+}

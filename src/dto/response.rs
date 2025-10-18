@@ -1,4 +1,6 @@
 use serde::{Deserialize, Serialize};
+
+use crate::Room;
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct MessageResponse {
     pub player_id : i32,
@@ -9,6 +11,6 @@ pub struct MessageResponse {
 pub enum MessageType {
     Text(MessageResponse),
     Emoji(MessageResponse),
-    Sync,
+    Sync(Room),
     Quit(i32,i32)
 }

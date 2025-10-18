@@ -6,6 +6,8 @@ use tokio::sync::broadcast;
 
 use crate::{AppState, Car, Player, Room};
 use axum::Json;
+use super::handle_ws_to_broadcast;
+use super::handle_broadcast_to_ws;
 
 #[derive(Deserialize)]
 pub struct CreateRoomRequest {
@@ -21,21 +23,12 @@ pub async fn create_room(
 ) -> impl IntoResponse {
     let room_id = request.player_id;
     if state.inner.room_info.get(&room_id).is_none() {
-        let cars = vec![Car {
-            car_id: request.car_id,
-            player_ids: vec![request.player_id],
-        }];
+        let cars = vec![];
         state.inner.room_info.insert(
             room_id,
             Room {
                 room_id,
-                players: vec![Player {
-                    player_id: request.player_id,
-                    player_name: request.player_name,
-                    car_id: request.car_id,
-                    weather_id: request.weather_id,
-                    background_id: request.background_id,
-                }],
+                players: vec![],
                 cars: cars,
                 weather_id: request.weather_id,
                 background_id: request.background_id,
@@ -48,7 +41,7 @@ pub async fn create_room(
         let (tx, rx) = broadcast::channel(100);
         state.inner.room_broadcast_couple.insert(room_id, (tx, rx));
     }
-    
+
     // 返回json
     let json = json!({
         "room_id": room_id,

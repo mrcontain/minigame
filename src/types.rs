@@ -1,4 +1,4 @@
-use crate::dto::MessageResponse;
+use crate::{dto::MessageResponse, MessageType};
 use serde::{Deserialize, Serialize};
 use tokio::sync::broadcast;
 
@@ -28,6 +28,6 @@ pub struct Player {
 }
 
 pub type room_broadcast_couple = (
-    broadcast::Sender<MessageResponse>,
-    broadcast::Receiver<MessageResponse>,
+    broadcast::Sender<MessageType>,
+    broadcast::Receiver<MessageType>,
 );

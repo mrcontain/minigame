@@ -325,78 +325,100 @@ pub async fn handle_ws_to_broadcast(
     while let Some(Ok(msg)) = ws_stream.next().await {
         debug!("📨 [ws_to_broadcast] 收到 WebSocket 消息: {:?}", msg);
 
-        if let Message::Text(text) = msg {
-            debug!("📝 [ws_to_broadcast] 收到文本消息: {}", text);
+        match msg {
+            Message::Text(text) => {
+                debug!("📝 [ws_to_broadcast] 收到文本消息: {}", text);
 
-            let json: serde_json::Value = match serde_json::from_str(&text) {
-                Ok(json) => {
-                    debug!("✅ [ws_to_broadcast] JSON 解析成功: {:?}", json);
-                    json
-                }
-                Err(e) => {
-                    error!("❌ [ws_to_broadcast] JSON 解析失败: {} - 错误: {}", text, e);
-                    continue;
-                }
-            };
-
-            let player_id = match json["player_id"].as_i64() {
-                Some(player_id) => {
-                    let id = player_id as i32;
-                    debug!("✅ [ws_to_broadcast] 提取 player_id: {}", id);
-                    id
-                }
-                None => {
-                    error!("❌ [ws_to_broadcast] player_id字段不存在: {}", text);
-                    continue;
-                }
-            };
-
-            let content = match json["content"].as_str() {
-                Some(content) => {
-                    debug!("✅ [ws_to_broadcast] 提取 content: {}", content);
-                    content.to_string()
-                }
-                None => {
-                    error!("❌ [ws_to_broadcast] content字段不存在: {}", text);
-                    continue;
-                }
-            };
-
-            let mes_type = match json["mes_type"].as_str() {
-                Some(mes_type) => {
-                    debug!("✅ [ws_to_broadcast] 提取 type: {}", mes_type);
-                    mes_type.to_string()
-                }
-                None => {
-                    error!("❌ [ws_to_broadcast] type字段不存在: {}", text);
-                    continue;
-                }
-            };
-            if mes_type == "text" {
-                match tx.send(MessageType::Text(MessageResponse {
-                    player_id,
-                    content: content.clone(),
-                })) {
-                    Ok(_) => {
-                        debug!("✅ [ws_to_broadcast] 消息广播成功");
+                let json: serde_json::Value = match serde_json::from_str(&text) {
+                    Ok(json) => {
+                        debug!("✅ [ws_to_broadcast] JSON 解析成功: {:?}", json);
+                        json
                     }
                     Err(e) => {
-                        error!("❌ [ws_to_broadcast] 消息广播失败: {} - 错误: {}", text, e);
+                        error!("❌ [ws_to_broadcast] JSON 解析失败: {} - 错误: {}", text, e);
                         continue;
                     }
                 };
-            } else if mes_type == "emoji" {
-                match tx.send(MessageType::Emoji(MessageResponse { player_id, content })) {
-                    Ok(_) => {
-                        debug!("✅ [ws_to_broadcast] 消息广播成功");
+
+                let player_id = match json["player_id"].as_i64() {
+                    Some(player_id) => {
+                        let id = player_id as i32;
+                        debug!("✅ [ws_to_broadcast] 提取 player_id: {}", id);
+                        id
                     }
-                    Err(e) => {
-                        error!("❌ [ws_to_broadcast] 消息广播失败: {} - 错误: {}", text, e);
+                    None => {
+                        error!("❌ [ws_to_broadcast] player_id字段不存在: {}", text);
                         continue;
                     }
                 };
+
+                let content = match json["content"].as_str() {
+                    Some(content) => {
+                        debug!("✅ [ws_to_broadcast] 提取 content: {}", content);
+                        content.to_string()
+                    }
+                    None => {
+                        error!("❌ [ws_to_broadcast] content字段不存在: {}", text);
+                        continue;
+                    }
+                };
+
+                let mes_type = match json["mes_type"].as_str() {
+                    Some(mes_type) => {
+                        debug!("✅ [ws_to_broadcast] 提取 type: {}", mes_type);
+                        mes_type.to_string()
+                    }
+                    None => {
+                        error!("❌ [ws_to_broadcast] type字段不存在: {}", text);
+                        continue;
+                    }
+                };
+                if mes_type == "text" {
+                    match tx.send(MessageType::Text(MessageResponse {
+                        player_id,
+                        content: content.clone(),
+                    })) {
+                        Ok(_) => {
+                            debug!("✅ [ws_to_broadcast] 消息广播成功");
+                        }
+                        Err(e) => {
+                            error!("❌ [ws_to_broadcast] 消息广播失败: {} - 错误: {}", text, e);
+                            continue;
+                        }
+                    };
+                } else if mes_type == "emoji" {
+                    match tx.send(MessageType::Emoji(MessageResponse { player_id, content })) {
+                        Ok(_) => {
+                            debug!("✅ [ws_to_broadcast] 消息广播成功");
+                        }
+                        Err(e) => {
+                            error!("❌ [ws_to_broadcast] 消息广播失败: {} - 错误: {}", text, e);
+                            continue;
+                        }
+                    };
+                }
             }
-        }
+            Message::Close(close_frame) => {
+                debug!("📨 [ws_to_broadcast] 收到关闭消息: {:?}", close_frame);
+                break;
+            }
+            Message::Binary(binary) => {
+                debug!("📨 [ws_to_broadcast] 收到二进制消息: {:?}", binary);
+                continue;
+            }
+            Message::Ping(ping) => {
+                debug!("📨 [ws_to_broadcast] 收到 Ping 消息: {:?}", ping);
+                continue;
+            }
+            Message::Pong(pong) => {
+                debug!("📨 [ws_to_broadcast] 收到 Pong 消息: {:?}", pong);
+                continue;
+            }
+            _ => {
+                debug!("📨 [ws_to_broadcast] 收到未知消息: {:?}", msg);
+                continue;
+            }
+        };
     }
 
     debug!("🛑 [ws_to_broadcast] WebSocket 接收任务结束");

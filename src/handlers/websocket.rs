@@ -185,6 +185,7 @@ async fn handle_websocket(
     let first_json = json!({
         "room_info": room_info.clone(),
     });
+    drop(room_info);
     debug!("📤 [handle_websocket] 准备发送欢迎消息，房间信息: {:?}", first_json);
     
     if socket

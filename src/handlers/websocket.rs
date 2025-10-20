@@ -7,7 +7,7 @@ use axum::{
     },
     response::IntoResponse,
 };
-use futures::{SinkExt, StreamExt};
+use futures::{future::join, SinkExt, StreamExt};
 use http::StatusCode;
 use log::info;
 use serde_json::json;
@@ -303,13 +303,19 @@ async fn handle_websocket(
 
     // 等待任一任务结束
     debug!("⏳ [handle_websocket] 等待任务结束...");
-    tokio::select! {
-        _ = ws_to_broadcast => {
-            debug!("🛑 [handle_websocket] ws_to_broadcast 任务已结束");
-        },
-        _ = broadcast_to_ws => {
-            debug!("🛑 [handle_websocket] broadcast_to_ws 任务已结束");
-        },
+    match tokio::join!(ws_to_broadcast, broadcast_to_ws) {
+        (Ok(_), Ok(_)) => {
+            debug!("🛑 [handle_websocket] 所有任务已结束");
+        }
+        (Err(e), _) => {
+            error!("❌ [handle_websocket] ws_to_broadcast 任务失败 - 错误: {}", e);
+        }
+        (_, Err(e)) => {
+            error!("❌ [handle_websocket] broadcast_to_ws 任务失败 - 错误: {}", e);
+        }
+        (Err(e), Err(e2)) => {
+            error!("❌ [handle_websocket] 所有任务失败 - 错误: {} {}", e, e2);
+        }
     }
     // 清理：从房间中移除玩家
     if room_id == player_id {

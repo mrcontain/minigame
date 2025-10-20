@@ -1,9 +1,12 @@
+use anyhow::Result;
+use serde::{Deserialize, Serialize};
+use sqlx::{Pool, Postgres};
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Friend {
     pub master_id: i32,
     pub friend_ids: Vec<i32>,
 }
-
 
 impl Friend {
     pub fn new(master_id: i32) -> Self {
@@ -13,28 +16,44 @@ impl Friend {
         }
     }
 
-    pub fn add_friend(pool: &Pool<Postgres>, master_id: i32, friend_id: i32) -> Result<()> {
-        let conn = pool.get().await?;
-        let query = "INSERT INTO friend_mapping (master_id, friend_id) VALUES ($1, $2)";
-        let params = (master_id, friend_id);
-        let _ = conn.execute(query, params).await?;
+    pub async fn add_friend(pool: &Pool<Postgres>, master_id: i32, friend_id: i32) -> Result<()> {
+        let result =
+            sqlx::query("INSERT INTO friend_mapping (master_id, friend_id) VALUES ($1, $2)")
+                .bind(master_id)
+                .bind(friend_id)
+                .execute(pool)
+                .await?;
+        if result.rows_affected() == 0 {
+            return Err(anyhow::anyhow!("添加好友失败"));
+        }
         Ok(())
     }
 
-    pub fn remove_friend(pool: &Pool<Postgres>, master_id: i32, friend_id: i32) -> Result<()> {
-        let conn = pool.get().await?;
-        let query = "DELETE FROM friend_mapping WHERE master_id = $1 AND friend_id = $2";
-        let params = (master_id, friend_id);
-        let _ = conn.execute(query, params).await?;
+    pub async fn remove_friend(
+        pool: &Pool<Postgres>,
+        master_id: i32,
+        friend_id: i32,
+    ) -> Result<()> {
+        let result =
+            sqlx::query(r#"DELETE FROM friend_mapping WHERE master_id = $1 AND friend_id = $2"#)
+                .bind(master_id)
+                .bind(friend_id)
+                .execute(pool)
+                .await?;
+        if result.rows_affected() == 0 {
+            return Err(anyhow::anyhow!("删除好友失败"));
+        }
         Ok(())
     }
 
-    pub fn get_friends(pool: &Pool<Postgres>, master_id: i32) -> Result<Vec<i32>> {
-        let conn = pool.get().await?;
-        let query = "SELECT friend_id FROM friend_mapping WHERE master_id = $1";
-        let params = (master_id,);
-        let rows = conn.query(query, params).await?;
-        let friends = rows.iter().map(|row| row.get("friend_id")).collect();
-        Ok(friends)
+    pub async fn get_friends(pool: &Pool<Postgres>, master_id: i32) -> Result<Self> {
+        let friend_ids: Vec<i32> = sqlx::query_scalar("SELECT friend_id FROM friend_mapping WHERE master_id = $1")
+            .bind(master_id)
+            .fetch_all(pool)
+            .await?;
+        Ok(Self {
+            master_id,
+            friend_ids,
+        })
     }
 }

@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::Arc, time::Instant};
 
 use axum::{
     extract::{
@@ -7,10 +7,12 @@ use axum::{
     },
     response::IntoResponse,
 };
+use bytes::Bytes;
 use futures::{SinkExt, StreamExt, future::join};
 use http::StatusCode;
 use log::info;
 use serde_json::json;
+use tokio::sync::Mutex;
 use tracing::{debug, error};
 
 use crate::{AppState, MessageType, Player, Room};
@@ -276,6 +278,7 @@ async fn handle_websocket(
     // 分离WebSocket发送和接收
     debug!("✂️ [handle_websocket] 分离 WebSocket 发送和接收通道");
     let (ws_sink, ws_stream) = socket.split();
+    let arc_ws_sink = Arc::new(Mutex::new(ws_sink));
 
     let content = format!("{}登录了房间", player_name);
     debug!("📢 [handle_websocket] 准备广播登录消息: {}", content);
@@ -291,7 +294,7 @@ async fn handle_websocket(
 
     // 监听broadcast pipeline如果收到消息则发送给客户端 - 启动发送任务
     let broadcast_to_ws = tokio::spawn(handle_broadcast_to_ws(
-        ws_sink,
+        arc_ws_sink.clone(),
         tx.clone(),
         player,
         content,
@@ -300,6 +303,7 @@ async fn handle_websocket(
     let room_info_clone = room_info.clone();
     drop(room_info);
 
+    let heartbeat_task = tokio::spawn(heartbeat_task(arc_ws_sink, player_id, state.clone()));
     match tx.send(MessageType::Sync(room_info_clone)) {
         Ok(_) => {
             debug!("✅ [broadcast_to_ws] 登录消息广播成功");
@@ -488,6 +492,7 @@ pub async fn handle_ws_to_broadcast(
                 continue;
             }
             Message::Pong(pong) => {
+                (*state).last_pong.insert(player_id, Instant::now());
                 debug!("📨 [ws_to_broadcast] 收到 Pong 消息: {:?}", pong);
                 continue;
             }
@@ -503,7 +508,7 @@ pub async fn handle_ws_to_broadcast(
 
 /// 处理从广播通道接收的消息并发送到 WebSocket
 pub async fn handle_broadcast_to_ws(
-    mut ws_sink: futures::stream::SplitSink<WebSocket, Message>,
+    mut ws_sink: Arc<Mutex<futures::stream::SplitSink<WebSocket, Message>>>,
     tx: tokio::sync::broadcast::Sender<MessageType>,
     player: Player,
     content: String,
@@ -540,7 +545,7 @@ pub async fn handle_broadcast_to_ws(
                             json_msg
                         );
 
-                        if let Err(e) = ws_sink
+                        if let Err(e) = (*ws_sink).lock().await
                             .send(Message::Text(json_msg.to_string().into()))
                             .await
                         {
@@ -559,7 +564,7 @@ pub async fn handle_broadcast_to_ws(
                             "📤 [broadcast_to_ws] 准备发送消息到 WebSocket: {:?}",
                             json_msg
                         );
-                        if let Err(e) = ws_sink
+                        if let Err(e) = ws_sink.lock().await
                             .send(Message::Text(json_msg.to_string().into()))
                             .await
                         {
@@ -578,7 +583,7 @@ pub async fn handle_broadcast_to_ws(
                             "📤 [broadcast_to_ws] 准备发送消息到 WebSocket: {:?}",
                             json_msg
                         );
-                        if let Err(e) = ws_sink
+                        if let Err(e) = ws_sink.lock().await
                             .send(Message::Text(json_msg.to_string().into()))
                             .await
                         {
@@ -617,7 +622,7 @@ pub async fn handle_broadcast_to_ws(
                                                 code: 1000, // 正常关闭
                                                 reason: "User quit".into(),
                                             }));
-                                        if ws_sink.send(close_frame).await.is_err() {
+                                        if ws_sink.lock().await.send(close_frame).await.is_err() {
                                             error!("❌ [broadcast_to_ws] 关闭帧发送失败");
                                         }
                                         info!("✅ [broadcast_to_ws] 关闭帧发送成功");
@@ -643,7 +648,7 @@ pub async fn handle_broadcast_to_ws(
                         code: 1008,
                         reason: "inactivetimeout".into(),
                     }));
-                    if ws_sink.send(close_frame).await.is_err() {
+                    if ws_sink.lock().await.send(close_frame).await.is_err() {
                         error!("❌ [broadcast_to_ws] 关闭帧发送失败");
                     }
                     break;
@@ -653,4 +658,40 @@ pub async fn handle_broadcast_to_ws(
     }
 
     debug!("🛑 [broadcast_to_ws] 广播监听任务结束");
+}
+
+// 心跳任务
+async fn heartbeat_task(
+    mut ws_sink: Arc<Mutex<futures::stream::SplitSink<WebSocket, Message>>>,
+    player_id: i32,
+    state:AppState,
+) {
+    let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(30));
+    
+    loop {
+        interval.tick().await;
+        
+        // 检查上次收到 Pong 的时间
+        let last_pong = match (*state).last_pong.get(&player_id) {
+            Some(last_pong) => last_pong,
+            None => {
+                error!("❌ [heartbeat] 玩家心跳时间不存在");
+                continue;
+            }
+        };
+        let elapsed = last_pong.elapsed();
+        
+        if elapsed > tokio::time::Duration::from_secs(90) {
+            // 90秒内没收到 Pong，认为连接已死
+            error!("💔 [heartbeat] 90秒内未收到 Pong，连接可能已断开");
+            break;
+        }
+        
+        debug!("💓 [heartbeat] 发送 Ping (上次 Pong: {:?}秒前)", elapsed.as_secs());
+        
+        if let Err(e) = ws_sink.lock().await.send(Message::Ping(Bytes::from_static(b"ping"))).await {
+            error!("❌ [heartbeat] Ping 发送失败: {}", e);
+            break;
+        }
+    }
 }

@@ -14,6 +14,7 @@ use tracing::info;
 use tracing::error;
 use std::sync::Arc;
 use std::ops::Deref;
+use std::time::Instant;
 pub mod config;
 pub use config::*;
 pub mod handlers;
@@ -22,6 +23,8 @@ pub mod dto;
 pub use dto::*;
 pub mod types;
 pub use types::*;
+pub mod models;
+pub use models::*;
 
 use axum::{
     Router,
@@ -59,6 +62,9 @@ pub fn get_route(state: AppState) -> Router {
         .route("/createroom", post(create_room))
         .route("/quitroom", post(quit_room))
         .route("/changecar",post(change_car))
+        .route("/addfriend",post(add_friend))
+        .route("/removefriend",post(remove_friend))
+        .route("/getfriends",post(get_friends))
         .layer(cors)
         .with_state(state)
 }
@@ -93,6 +99,7 @@ pub struct InnerAppState {
     pub room_broadcast_couple: Arc<DashMap<i32, room_broadcast_couple>>,
     pub room_info: Arc<DashMap<i32, Room>>,
     pub normal_quit_room: Arc<DashMap<i32, ()>>, // 正常退出房间
+    pub last_pong:Arc<DashMap<i32, Instant>>,
     pub pool: PgPool,
     // // 用于数据数据解密
     // pub public_key: Vec<u8>,
@@ -117,6 +124,7 @@ impl InnerAppState {
             room_broadcast_couple: Arc::new(DashMap::new()),
             room_info: Arc::new(DashMap::new()),
             normal_quit_room: Arc::new(DashMap::new()),
+            last_pong: Arc::new(DashMap::new()),
             pool,
         }
     }

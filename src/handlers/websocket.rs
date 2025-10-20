@@ -272,7 +272,6 @@ async fn handle_websocket(
         }
     };
     let tx = room.0.clone();
-    let tx_clone = tx.clone();
 
     // 分离WebSocket发送和接收
     debug!("✂️ [handle_websocket] 分离 WebSocket 发送和接收通道");
@@ -284,22 +283,31 @@ async fn handle_websocket(
     // 群发信息 - 启动接收任务
     let ws_to_broadcast = tokio::spawn(handle_ws_to_broadcast(
         ws_stream,
-        tx,
+        tx.clone(),
         room_id,
         player_id,
         state.clone(),
     ));
-    let room_info_clone = room_info.clone();
-    drop(room_info);
+
     // 监听broadcast pipeline如果收到消息则发送给客户端 - 启动发送任务
     let broadcast_to_ws = tokio::spawn(handle_broadcast_to_ws(
         ws_sink,
-        tx_clone,
+        tx.clone(),
         player,
         content,
-        room_info_clone,
         state.clone(),
     ));
+    let room_info_clone = room_info.clone();
+    drop(room_info);
+
+    match tx.send(MessageType::Sync(room_info_clone)) {
+        Ok(_) => {
+            debug!("✅ [broadcast_to_ws] 登录消息广播成功");
+        }
+        Err(e) => {
+            error!("❌ [broadcast_to_ws] 发送登录消息失败 - 错误: {}", e);
+        }
+    };
 
     // 等待任一任务结束
     debug!("⏳ [handle_websocket] 等待任务结束...");
@@ -429,8 +437,9 @@ pub async fn handle_ws_to_broadcast(
                                 continue;
                             }
                         };
-                        
-                        room_info.players
+
+                        room_info
+                            .players
                             .iter()
                             .filter(|p| p.player_id != player_id)
                             .map(|p| p.player_id)
@@ -440,14 +449,17 @@ pub async fn handle_ws_to_broadcast(
                     for pid in player_ids {
                         match tx.send(MessageType::Quit(pid, room_id)) {
                             Ok(_) => {
-                                debug!("✅ [ws_to_broadcast] 退出消息广播成功 - player_id: {}", pid);
+                                debug!(
+                                    "✅ [ws_to_broadcast] 退出消息广播成功 - player_id: {}",
+                                    pid
+                                );
                             }
                             Err(e) => {
                                 error!("❌ [ws_to_broadcast] 退出消息广播失败: 错误: {e}");
                             }
                         }
                     }
-                } 
+                }
                 break;
             }
             Message::Binary(binary) => {
@@ -478,7 +490,6 @@ pub async fn handle_broadcast_to_ws(
     tx: tokio::sync::broadcast::Sender<MessageType>,
     player: Player,
     content: String,
-    room_info: Room,
     state: AppState,
 ) {
     debug!("🚀 [broadcast_to_ws] 启动广播监听任务");
@@ -488,14 +499,6 @@ pub async fn handle_broadcast_to_ws(
         "📢 [broadcast_to_ws] 准备发送登录通知 - player_id: {}, content: {}",
         player.player_id, content
     );
-    match tx.send(MessageType::Sync(room_info)) {
-        Ok(_) => {
-            debug!("✅ [broadcast_to_ws] 登录消息广播成功");
-        }
-        Err(e) => {
-            error!("❌ [broadcast_to_ws] 发送登录消息失败 - 错误: {}", e);
-        }
-    }
 
     debug!("🔄 [broadcast_to_ws] 开始订阅广播频道");
     let mut rx = tx.subscribe();
@@ -569,7 +572,10 @@ pub async fn handle_broadcast_to_ws(
                     }
                     MessageType::Quit(quit_player_id, room_id) => {
                         debug!("🛑 [broadcast_to_ws] 收到退出消息");
-                        debug!("quit_player_id :{quit_player_id} palyer_id :{},room_id :{room_id}",player.player_id);
+                        debug!(
+                            "quit_player_id :{quit_player_id} palyer_id :{},room_id :{room_id}",
+                            player.player_id
+                        );
                         if quit_player_id == player.player_id {
                             debug!("🛑 [broadcast_to_ws] 自己退出房间");
                             let mut room_info = match state.inner.room_info.get_mut(&room_id) {

@@ -332,8 +332,24 @@ async fn handle_websocket(
     debug!("room_id :{room_id} player_id :{player_id}");
     // 清理：从房间中移除玩家
     if room_id == player_id {
-        (*state).room_info.remove(&room_id);
-        (*state).room_broadcast_couple.remove(&room_id);
+        match (*state).room_info.remove(&room_id) {
+            Some(room) => {
+                drop(room);
+            }
+            None => {
+                error!("❌ [handle_websocket] 房间不存在");
+                return;
+            }
+        };
+        match (*state).room_broadcast_couple.remove(&room_id) {
+            Some(couple) => {
+                drop(couple);
+            }
+            None => {
+                error!("❌ [handle_websocket] 房间广播管道不存在");
+                return;
+            }
+        };
         debug!("🗑️ [handle_websocket] 房间 {} 已清空并删除", room_id);
     }
     debug!("👋 [handle_websocket] WebSocket 连接处理完成");

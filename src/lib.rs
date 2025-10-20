@@ -92,6 +92,7 @@ pub struct InnerAppState {
     // 活跃会话
     pub room_broadcast_couple: Arc<DashMap<i32, room_broadcast_couple>>,
     pub room_info: Arc<DashMap<i32, Room>>,
+    pub normal_quit_room: Arc<DashMap<i32, ()>>, // 正常退出房间
     pub pool: PgPool,
     // // 用于数据数据解密
     // pub public_key: Vec<u8>,
@@ -115,6 +116,7 @@ impl InnerAppState {
         InnerAppState {
             room_broadcast_couple: Arc::new(DashMap::new()),
             room_info: Arc::new(DashMap::new()),
+            normal_quit_room: Arc::new(DashMap::new()),
             pool,
         }
     }

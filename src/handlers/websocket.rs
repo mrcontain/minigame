@@ -597,28 +597,32 @@ pub async fn handle_broadcast_to_ws(
                         );
                         if quit_player_id == player.player_id {
                             debug!("🛑 [broadcast_to_ws] 自己退出房间");
-                            let  room_info = match state.inner.room_info.get(&room_id) {
+                            let room_info = match state.inner.room_info.get(&room_id) {
                                 Some(room) => room,
                                 None => {
                                     error!("❌ [broadcast_to_ws] 房间不存在");
                                     continue;
                                 }
                             };
-                            
+
                             let room_info_clone = room_info.clone();
                             drop(room_info);
                             match tx.send(MessageType::Sync(room_info_clone)) {
                                 Ok(_) => {
                                     debug!("✅ [broadcast_to_ws] 同步消息广播成功");
-                                    let close_frame =
-                                        Message::Close(Some(axum::extract::ws::CloseFrame {
-                                            code: 1000, // 正常关闭
-                                            reason: "User quit".into(),
-                                        }));
-                                    if ws_sink.send(close_frame).await.is_err() {
-                                        error!("❌ [broadcast_to_ws] 关闭帧发送失败");
+                                    if quit_player_id == room_id
+                                        && (*state).normal_quit_room.get(&quit_player_id).is_some()
+                                    {
+                                        let close_frame =
+                                            Message::Close(Some(axum::extract::ws::CloseFrame {
+                                                code: 1000, // 正常关闭
+                                                reason: "User quit".into(),
+                                            }));
+                                        if ws_sink.send(close_frame).await.is_err() {
+                                            error!("❌ [broadcast_to_ws] 关闭帧发送失败");
+                                        }
+                                        info!("✅ [broadcast_to_ws] 关闭帧发送成功");
                                     }
-                                    info!("✅ [broadcast_to_ws] 关闭帧发送成功");
                                 }
                                 Err(e) => {
                                     error!("❌ [broadcast_to_ws] 同步消息广播失败 - 错误: {}", e);

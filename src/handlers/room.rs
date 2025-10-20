@@ -96,6 +96,7 @@ pub async fn quit_room(
     } else {
         return (StatusCode::BAD_REQUEST, "玩家不存在").into_response();
     }
+    (*state).normal_quit_room.insert(quit_player_id, ());
 
     let tx = couple.0.clone();
     match tx.send(MessageType::Quit(request.player_id, room_id)) {

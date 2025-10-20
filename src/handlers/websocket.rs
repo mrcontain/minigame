@@ -327,6 +327,7 @@ async fn handle_websocket(
     debug!("room_id :{room_id} player_id :{player_id}");
     // 清理：从房间中移除玩家
     if room_id == player_id {
+        debug!("开始清理");
         (*state).room_info.remove(&room_id);
         (*state).room_broadcast_couple.remove(&room_id);
         debug!("🗑️ [handle_websocket] 房间 {} 已清空并删除", room_id);
@@ -443,7 +444,7 @@ pub async fn handle_ws_to_broadcast(
                             };
                         }
                     });
-                }
+                } 
                 break;
             }
             Message::Binary(binary) => {

@@ -9,6 +9,9 @@
 use anyhow::Result;
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
+use sqlx::PgPool;
+use tracing::info;
+use tracing::error;
 use std::sync::Arc;
 use std::ops::Deref;
 pub mod config;
@@ -65,9 +68,11 @@ pub struct AppState {
     pub inner: Arc<InnerAppState>,
 }
 impl AppState {
-    pub fn try_new(_config: &Config) -> Result<Self> {
+    pub fn try_new(config: &Config) -> Result<Self> {
         Ok(AppState {
-            inner: Arc::new(InnerAppState::new()),
+            inner: Arc::new(InnerAppState::new(
+            &config.database,
+            )),
         })
     }
 }
@@ -87,7 +92,7 @@ pub struct InnerAppState {
     // 活跃会话
     pub room_broadcast_couple: Arc<DashMap<i32, room_broadcast_couple>>,
     pub room_info: Arc<DashMap<i32, Room>>,
-    // pub pool: PgPool,
+    pub pool: PgPool,
     // // 用于数据数据解密
     // pub public_key: Vec<u8>,
     // // 用于数据加密
@@ -95,10 +100,22 @@ pub struct InnerAppState {
 }
 
 impl InnerAppState {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(url: &str) -> Self {
+        // 创建一个pgsql连接池
+        let pool = match PgPool::connect_lazy(url) {
+            Ok(pool) => {
+                info!("Postgres connection pool created successfully");
+                pool
+            }
+            Err(e) => {
+                error!("Failed to create Postgres connection pool: {}", e);
+                panic!("Failed to create Postgres connection pool");
+            }
+        };
         InnerAppState {
             room_broadcast_couple: Arc::new(DashMap::new()),
             room_info: Arc::new(DashMap::new()),
+            pool,
         }
     }
 }

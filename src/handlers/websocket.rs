@@ -7,7 +7,7 @@ use axum::{
     },
     response::IntoResponse,
 };
-use futures::{future::join, SinkExt, StreamExt};
+use futures::{SinkExt, StreamExt, future::join};
 use http::StatusCode;
 use log::info;
 use serde_json::json;
@@ -308,10 +308,16 @@ async fn handle_websocket(
             debug!("🛑 [handle_websocket] 所有任务已结束");
         }
         (Err(e), _) => {
-            error!("❌ [handle_websocket] ws_to_broadcast 任务失败 - 错误: {}", e);
+            error!(
+                "❌ [handle_websocket] ws_to_broadcast 任务失败 - 错误: {}",
+                e
+            );
         }
         (_, Err(e)) => {
-            error!("❌ [handle_websocket] broadcast_to_ws 任务失败 - 错误: {}", e);
+            error!(
+                "❌ [handle_websocket] broadcast_to_ws 任务失败 - 错误: {}",
+                e
+            );
         }
         (Err(e), Err(e2)) => {
             error!("❌ [handle_websocket] 所有任务失败 - 错误: {} {}", e, e2);
@@ -424,14 +430,16 @@ pub async fn handle_ws_to_broadcast(
                         }
                     };
                     room_info.players.iter().for_each(|player| {
-                        match tx.send(MessageType::Quit(player.player_id, room_id)) {
-                            Ok(_) => {
-                                debug!("✅ [ws_to_broadcast] 退出消息广播成功");
-                            }
-                            Err(e) => {
-                                error!("❌ [ws_to_broadcast] 退出消息广播失败:  错误: {e}");
-                            }
-                        };
+                        if player.player_id != player_id {
+                            match tx.send(MessageType::Quit(player.player_id, room_id)) {
+                                Ok(_) => {
+                                    debug!("✅ [ws_to_broadcast] 退出消息广播成功");
+                                }
+                                Err(e) => {
+                                    error!("❌ [ws_to_broadcast] 退出消息广播失败:  错误: {e}");
+                                }
+                            };
+                        }
                     });
                 }
                 break;

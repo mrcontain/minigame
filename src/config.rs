@@ -29,6 +29,7 @@ pub struct KeyConfig {
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
     pub bind: BindConfig,
+    pub database: String,
 }
 
 impl Config {

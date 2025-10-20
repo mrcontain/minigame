@@ -597,18 +597,14 @@ pub async fn handle_broadcast_to_ws(
                         );
                         if quit_player_id == player.player_id {
                             debug!("🛑 [broadcast_to_ws] 自己退出房间");
-                            let mut room_info = match state.inner.room_info.get_mut(&room_id) {
+                            let  room_info = match state.inner.room_info.get(&room_id) {
                                 Some(room) => room,
                                 None => {
                                     error!("❌ [broadcast_to_ws] 房间不存在");
                                     continue;
                                 }
                             };
-                            room_info.players.retain(|p| p.player_id != quit_player_id);
-                            room_info.cars.retain(|c| c.car_id != player.car_id);
-                            room_info.cars.iter_mut().for_each(|c| {
-                                c.player_ids.retain(|id| *id != quit_player_id);
-                            });
+                            
                             let room_info_clone = room_info.clone();
                             drop(room_info);
                             match tx.send(MessageType::Sync(room_info_clone)) {

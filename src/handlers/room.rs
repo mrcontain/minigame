@@ -10,8 +10,8 @@ use crate::MessageType;
 use crate::QuitRoomRequest;
 use crate::{AppState, Car, Player, Room};
 use axum::Json;
-use tracing::error;
 use tracing::debug;
+use tracing::error;
 
 #[derive(Deserialize)]
 pub struct CreateRoomRequest {
@@ -59,6 +59,7 @@ pub async fn quit_room(
     Json(request): Json<QuitRoomRequest>,
 ) -> impl IntoResponse {
     let room_id = request.room_id;
+    let quit_player_id = request.player_id;
     if (*state).room_info.get(&room_id).is_none() {
         return (StatusCode::BAD_REQUEST, "房间不存在").into_response();
     }
@@ -71,8 +72,33 @@ pub async fn quit_room(
             return (StatusCode::BAD_REQUEST, "房间不存在").into_response();
         }
     };
+    let mut room_info = match state.inner.room_info.get_mut(&room_id) {
+        Some(room) => room,
+        None => {
+            return (StatusCode::BAD_REQUEST, "房间不存在").into_response();
+        }
+    };
+    if let Some(pos) = room_info
+        .players
+        .iter()
+        .position(|p| p.player_id == quit_player_id)
+    {
+        // 直接取出被删除的玩家（拿到所有权，不用 clone）
+        let player = room_info.players.remove(pos);
+
+        // 删除该玩家对应的 car
+        room_info.cars.retain(|c| c.car_id != player.car_id);
+
+        // 从所有 car 的 player_ids 里移除这个玩家 id
+        for car in &mut room_info.cars {
+            car.player_ids.retain(|id| *id != quit_player_id);
+        }
+    } else {
+        return (StatusCode::BAD_REQUEST, "玩家不存在").into_response();
+    }
+
     let tx = couple.0.clone();
-    match tx.send(MessageType::Quit(request.player_id,room_id)) {
+    match tx.send(MessageType::Quit(request.player_id, room_id)) {
         Ok(_) => {
             debug!("✅ [broadcast_to_ws] 退出消息广播成功");
         }

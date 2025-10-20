@@ -323,6 +323,7 @@ async fn handle_websocket(
             error!("❌ [handle_websocket] 所有任务失败 - 错误: {} {}", e, e2);
         }
     }
+    debug!("room_id :{room_id} player_id :{player_id}");
     // 清理：从房间中移除玩家
     if room_id == player_id {
         (*state).room_info.remove(&room_id);

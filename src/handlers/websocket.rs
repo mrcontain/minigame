@@ -421,25 +421,32 @@ pub async fn handle_ws_to_broadcast(
             Message::Close(close_frame) => {
                 debug!("📨 [ws_to_broadcast] 收到关闭消息: {:?}", close_frame);
                 if room_id == player_id {
-                    let room_info = match (*state).room_info.get(&room_id) {
-                        Some(room) => room,
-                        None => {
-                            error!("❌ [ws_to_broadcast] 房间不存在");
-                            continue;
-                        }
+                    let player_ids: Vec<i32> = {
+                        let room_info = match (*state).room_info.get(&room_id) {
+                            Some(room) => room,
+                            None => {
+                                error!("❌ [ws_to_broadcast] 房间不存在");
+                                continue;
+                            }
+                        };
+                        
+                        room_info.players
+                            .iter()
+                            .filter(|p| p.player_id != player_id)
+                            .map(|p| p.player_id)
+                            .collect()
                     };
-                    room_info.players.iter().for_each(|player| {
-                        if player.player_id != player_id {
-                            match tx.send(MessageType::Quit(player.player_id, room_id)) {
-                                Ok(_) => {
-                                    debug!("✅ [ws_to_broadcast] 退出消息广播成功");
-                                }
-                                Err(e) => {
-                                    error!("❌ [ws_to_broadcast] 退出消息广播失败:  错误: {e}");
-                                }
-                            };
+
+                    for pid in player_ids {
+                        match tx.send(MessageType::Quit(pid, room_id)) {
+                            Ok(_) => {
+                                debug!("✅ [ws_to_broadcast] 退出消息广播成功 - player_id: {}", pid);
+                            }
+                            Err(e) => {
+                                error!("❌ [ws_to_broadcast] 退出消息广播失败: 错误: {e}");
+                            }
                         }
-                    });
+                    }
                 } 
                 break;
             }

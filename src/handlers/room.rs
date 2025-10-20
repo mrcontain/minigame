@@ -59,7 +59,7 @@ pub async fn quit_room(
     Json(request): Json<QuitRoomRequest>,
 ) -> impl IntoResponse {
     let room_id = request.room_id;
-    if state.inner.room_info.get(&room_id).is_none() {
+    if (*state).room_info.get(&room_id).is_none() {
         return (StatusCode::BAD_REQUEST, "房间不存在").into_response();
     }
     if state.inner.room_broadcast_couple.get(&room_id).is_none() {

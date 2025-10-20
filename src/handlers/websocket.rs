@@ -320,14 +320,10 @@ async fn handle_websocket(
                 e
             );
         }
-        (Err(e), Err(e2)) => {
-            error!("❌ [handle_websocket] 所有任务失败 - 错误: {} {}", e, e2);
-        }
     }
     debug!("room_id :{room_id} player_id :{player_id}");
     // 清理：从房间中移除玩家
     if room_id == player_id {
-        debug!("开始清理");
         (*state).room_info.remove(&room_id);
         (*state).room_broadcast_couple.remove(&room_id);
         debug!("🗑️ [handle_websocket] 房间 {} 已清空并删除", room_id);
@@ -581,7 +577,9 @@ pub async fn handle_broadcast_to_ws(
                             room_info.cars.iter_mut().for_each(|c| {
                                 c.player_ids.retain(|id| *id != quit_player_id);
                             });
-                            match tx.send(MessageType::Sync(room_info.clone())) {
+                            let room_info_clone = room_info.clone();
+                            drop(room_info);
+                            match tx.send(MessageType::Sync(room_info_clone)) {
                                 Ok(_) => {
                                     debug!("✅ [broadcast_to_ws] 同步消息广播成功");
                                     let close_frame =

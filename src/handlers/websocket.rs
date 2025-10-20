@@ -330,6 +330,7 @@ async fn handle_websocket(
         }
     }
     debug!("room_id :{room_id} player_id :{player_id}");
+    drop(room);
     // 清理：从房间中移除玩家
     if room_id == player_id {
         match (*state).room_info.remove(&room_id) {

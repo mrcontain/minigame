@@ -459,7 +459,6 @@ pub async fn handle_ws_to_broadcast(
                         room_info
                             .players
                             .iter()
-                            .filter(|p| p.player_id != player_id)
                             .map(|p| p.player_id)
                             .collect()
                     };

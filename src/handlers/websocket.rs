@@ -586,6 +586,7 @@ pub async fn handle_broadcast_to_ws(
                         } else {
                             debug!("✅ [broadcast_to_ws] 消息发送成功");
                         }
+                        drop(room_info);
                     }
                     MessageType::Quit(quit_player_id, room_id) => {
                         debug!("🛑 [broadcast_to_ws] 收到退出消息");

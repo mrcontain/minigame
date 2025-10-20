@@ -334,7 +334,7 @@ async fn handle_websocket(
     if room_id == player_id {
         match (*state).room_info.remove(&room_id) {
             Some(room) => {
-                drop(room);
+                info!("room removed")
             }
             None => {
                 error!("❌ [handle_websocket] 房间不存在");
@@ -343,6 +343,7 @@ async fn handle_websocket(
         };
         match (*state).room_broadcast_couple.remove(&room_id) {
             Some(couple) => {
+                info!("couple removed");
                 drop(couple);
             }
             None => {

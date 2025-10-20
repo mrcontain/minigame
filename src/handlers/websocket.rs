@@ -565,6 +565,7 @@ pub async fn handle_broadcast_to_ws(
                     }
                     MessageType::Quit(quit_player_id, room_id) => {
                         debug!("🛑 [broadcast_to_ws] 收到退出消息");
+                        debug!("quit_player_id :{quit_player_id} palyer_id :{}",player.player_id);
                         if quit_player_id == player.player_id {
                             debug!("🛑 [broadcast_to_ws] 自己退出房间");
                             let mut room_info = match state.inner.room_info.get_mut(&room_id) {

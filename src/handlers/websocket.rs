@@ -306,6 +306,7 @@ async fn handle_websocket(
     match tokio::join!(ws_to_broadcast, broadcast_to_ws) {
         (Ok(_), Ok(_)) => {
             debug!("🛑 [handle_websocket] 所有任务已结束");
+            debug!("room_id :{room_id} player_id :{player_id}");
         }
         (Err(e), _) => {
             error!(

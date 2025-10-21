@@ -470,6 +470,7 @@ pub async fn handle_ws_to_broadcast(
                     };
 
                     for pid in player_ids {
+                        (*state).normal_quit_room.insert(pid, ());
                         match tx.send(MessageType::Quit(pid, room_id)) {
                             Ok(_) => {
                                 debug!(
@@ -480,6 +481,15 @@ pub async fn handle_ws_to_broadcast(
                             Err(e) => {
                                 error!("❌ [ws_to_broadcast] 退出消息广播失败: 错误: {e}");
                             }
+                        }
+                    }
+                } else  {
+                    match tx.send(MessageType::Quit(player_id, room_id)) {
+                        Ok(_) => {
+                            debug!("✅ [ws_to_broadcast] 退出消息广播成功 - player_id: {}", player_id);
+                        }
+                        Err(e) => {
+                            error!("❌ [ws_to_broadcast] 退出消息广播失败: 错误: {e}");
                         }
                     }
                 }
@@ -622,8 +632,7 @@ pub async fn handle_broadcast_to_ws(
                             match tx.send(MessageType::Sync(room_info_clone)) {
                                 Ok(_) => {
                                     debug!("✅ [broadcast_to_ws] 同步消息广播成功");
-                                    if !(quit_player_id == room_id
-                                        && (*state).normal_quit_room.get(&quit_player_id).is_none())
+                                    if (*state).normal_quit_room.get(&quit_player_id).is_some()
                                     {
                                         let close_frame =
                                             Message::Close(Some(axum::extract::ws::CloseFrame {

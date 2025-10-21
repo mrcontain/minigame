@@ -466,11 +466,7 @@ pub async fn handle_ws_to_broadcast(
                             }
                         };
 
-                        room_info
-                            .players
-                            .iter()
-                            .map(|p| p.player_id)
-                            .collect()
+                        room_info.players.iter().map(|p| p.player_id).collect()
                     };
 
                     for pid in player_ids {
@@ -551,7 +547,9 @@ pub async fn handle_broadcast_to_ws(
                             json_msg
                         );
 
-                        if let Err(e) = (*ws_sink).lock().await
+                        if let Err(e) = (*ws_sink)
+                            .lock()
+                            .await
                             .send(Message::Text(json_msg.to_string().into()))
                             .await
                         {
@@ -570,7 +568,9 @@ pub async fn handle_broadcast_to_ws(
                             "📤 [broadcast_to_ws] 准备发送消息到 WebSocket: {:?}",
                             json_msg
                         );
-                        if let Err(e) = ws_sink.lock().await
+                        if let Err(e) = ws_sink
+                            .lock()
+                            .await
                             .send(Message::Text(json_msg.to_string().into()))
                             .await
                         {
@@ -589,7 +589,9 @@ pub async fn handle_broadcast_to_ws(
                             "📤 [broadcast_to_ws] 准备发送消息到 WebSocket: {:?}",
                             json_msg
                         );
-                        if let Err(e) = ws_sink.lock().await
+                        if let Err(e) = ws_sink
+                            .lock()
+                            .await
                             .send(Message::Text(json_msg.to_string().into()))
                             .await
                         {
@@ -620,8 +622,8 @@ pub async fn handle_broadcast_to_ws(
                             match tx.send(MessageType::Sync(room_info_clone)) {
                                 Ok(_) => {
                                     debug!("✅ [broadcast_to_ws] 同步消息广播成功");
-                                    if quit_player_id == room_id
-                                        && (*state).normal_quit_room.get(&quit_player_id).is_some()
+                                    if !(quit_player_id == room_id
+                                        && (*state).normal_quit_room.get(&quit_player_id).is_none())
                                     {
                                         let close_frame =
                                             Message::Close(Some(axum::extract::ws::CloseFrame {
@@ -670,26 +672,34 @@ pub async fn handle_broadcast_to_ws(
 async fn heartbeat_task(
     mut ws_sink: Arc<Mutex<futures::stream::SplitSink<WebSocket, Message>>>,
     player_id: i32,
-    state:AppState,
+    state: AppState,
 ) {
     let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(5));
-    
+
     loop {
         interval.tick().await;
-        
+
         // 检查上次收到 Pong 的时间
-        let last_pong =  (*state).last_pong.entry(player_id).or_insert(Instant::now());
+        let last_pong = (*state)
+            .last_pong
+            .entry(player_id)
+            .or_insert(Instant::now());
         let elapsed = last_pong.elapsed();
-        
+
         if elapsed > tokio::time::Duration::from_secs(10) {
             // 90秒内没收到 Pong，认为连接已死
             error!("💔 [heartbeat] 90秒内未收到 Pong，连接可能已断开");
             break;
         }
-        
+
         // debug!("💓 [heartbeat] 发送 Ping (上次 Pong: {:?}秒前)", elapsed.as_secs());
-        
-        if let Err(e) = ws_sink.lock().await.send(Message::Ping(Bytes::from_static(b"ping"))).await {
+
+        if let Err(e) = ws_sink
+            .lock()
+            .await
+            .send(Message::Ping(Bytes::from_static(b"ping")))
+            .await
+        {
             error!("❌ [heartbeat] Ping 发送失败: {}", e);
             break;
         }

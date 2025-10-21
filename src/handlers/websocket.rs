@@ -651,7 +651,7 @@ pub async fn handle_broadcast_to_ws(
                                 Some(room) => room,
                                 None => {
                                     error!("❌ [broadcast_to_ws] 房间不存在");
-                                    continue;
+                                    // continue;
                                 }
                             };
 
@@ -676,7 +676,6 @@ pub async fn handle_broadcast_to_ws(
                                                 );
                                             }
                                         }
-                                        info!("✅ [broadcast_to_ws] 关闭帧发送成功");
                                     }
                                 }
                                 Err(e) => {

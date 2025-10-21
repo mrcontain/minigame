@@ -639,8 +639,13 @@ pub async fn handle_broadcast_to_ws(
                                                 code: 1000, // 正常关闭
                                                 reason: "User quit".into(),
                                             }));
-                                        if ws_sink.lock().await.send(close_frame).await.is_err() {
-                                            error!("❌ [broadcast_to_ws] 关闭帧发送失败");
+                                        match ws_sink.lock().await.send(close_frame).await {
+                                            Ok(_) => {
+                                                info!("✅ [broadcast_to_ws] 关闭帧发送成功");
+                                            }
+                                            Err(e) => {
+                                                error!("❌ [broadcast_to_ws] 关闭帧发送失败: 错误: {e}");
+                                            }
                                         }
                                         info!("✅ [broadcast_to_ws] 关闭帧发送成功");
                                     }

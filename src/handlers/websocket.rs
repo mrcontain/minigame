@@ -651,6 +651,23 @@ pub async fn handle_broadcast_to_ws(
                                 Some(room) => room,
                                 None => {
                                     error!("❌ [broadcast_to_ws] 房间不存在");
+                                    if (*state).normal_quit_room.get(&quit_player_id).is_some() {
+                                        let close_frame =
+                                            Message::Close(Some(axum::extract::ws::CloseFrame {
+                                                code: 1000, // 正常关闭
+                                                reason: "User quit".into(),
+                                            }));
+                                        match ws_sink.lock().await.send(close_frame).await {
+                                            Ok(_) => {
+                                                info!("✅ [broadcast_to_ws] 关闭帧发送成功");
+                                            }
+                                            Err(e) => {
+                                                error!(
+                                                    "❌ [broadcast_to_ws] quit_player_id :{quit_player_id} 关闭帧发送失败: 错误: {e}"
+                                                );
+                                            }
+                                        }
+                                    }
                                     break;
                                     // continue;
                                 }

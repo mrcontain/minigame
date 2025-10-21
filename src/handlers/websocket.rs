@@ -315,20 +315,26 @@ async fn handle_websocket(
 
     // 等待任一任务结束
     debug!("⏳ [handle_websocket] 等待任务结束...");
-    match tokio::join!(ws_to_broadcast, broadcast_to_ws) {
-        (Ok(_), Ok(_)) => {
+    match tokio::join!(ws_to_broadcast, broadcast_to_ws, heartbeat_task) {
+        (Ok(_), Ok(_), Ok(_)) => {
             debug!("🛑 [handle_websocket] 所有任务已结束");
             debug!("room_id :{room_id} player_id :{player_id}");
         }
-        (Err(e), _) => {
+        (Err(e), _, _) => {
             error!(
                 "❌ [handle_websocket] ws_to_broadcast 任务失败 - 错误: {}",
                 e
             );
         }
-        (_, Err(e)) => {
+        (_, _, Err(e)) => {
             error!(
                 "❌ [handle_websocket] broadcast_to_ws 任务失败 - 错误: {}",
+                e
+            );
+        }
+        (_, Err(e), _) => {
+            error!(
+                "❌ [handle_websocket] heartbeat_task 任务失败 - 错误: {}",
                 e
             );
         }
@@ -338,7 +344,7 @@ async fn handle_websocket(
     // 清理：从房间中移除玩家
     if room_id == player_id {
         match (*state).room_info.remove(&room_id) {
-            Some(room) => {
+            Some(_) => {
                 info!("room removed")
             }
             None => {
@@ -488,12 +494,12 @@ pub async fn handle_ws_to_broadcast(
                 continue;
             }
             Message::Ping(ping) => {
-                debug!("📨 [ws_to_broadcast] 收到 Ping 消息: {:?}", ping);
+                // debug!("📨 [ws_to_broadcast] 收到 Ping 消息: {:?}", ping);
                 continue;
             }
             Message::Pong(pong) => {
                 (*state).last_pong.insert(player_id, Instant::now());
-                debug!("📨 [ws_to_broadcast] 收到 Pong 消息: {:?}", pong);
+                // debug!("📨 [ws_to_broadcast] 收到 Pong 消息: {:?}", pong);
                 continue;
             }
             _ => {
@@ -681,7 +687,7 @@ async fn heartbeat_task(
             break;
         }
         
-        debug!("💓 [heartbeat] 发送 Ping (上次 Pong: {:?}秒前)", elapsed.as_secs());
+        // debug!("💓 [heartbeat] 发送 Ping (上次 Pong: {:?}秒前)", elapsed.as_secs());
         
         if let Err(e) = ws_sink.lock().await.send(Message::Ping(Bytes::from_static(b"ping"))).await {
             error!("❌ [heartbeat] Ping 发送失败: {}", e);

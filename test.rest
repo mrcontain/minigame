@@ -138,3 +138,24 @@ Content-Type: application/json
   "master_id": 1,
   "friend_id": 3
 }
+
+### 测试换车
+POST {{baseUrl}}/changecar
+Content-Type: application/json
+
+{
+  "room_id": 1,
+  "player_id": 1,
+  "car_id": 3
+}
+
+### 测试给车换皮肤
+POST {{baseUrl}}/changecarskin
+Content-Type: application/json
+
+{
+  "room_id": 1,
+  "player_id": 1,
+  "car_id": 2,
+  "skin_id": 4
+}

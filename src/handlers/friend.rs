@@ -1,5 +1,6 @@
 use axum::{extract::State, response::IntoResponse, Json};
 use http::StatusCode;
+use log::info;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 use tracing::error;
@@ -17,14 +18,13 @@ pub async fn add_friend(
 ) -> impl IntoResponse {
     match Friend::add_friend(&state.pool, request.master_id, request.friend_id).await {
         Ok(_) => {
-            (StatusCode::OK, "好友添加成功").into_response()
+            return (StatusCode::OK, "好友添加成功").into_response();
         }
         Err(e) => {
             error!("❌ [add_friend] 添加好友失败 - 错误: {}", e);
-            (StatusCode::BAD_REQUEST, "添加好友失败").into_response()
+            return (StatusCode::BAD_REQUEST, "添加好友失败").into_response();
         }
     };
-    (StatusCode::OK, "好友添加成功").into_response()
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -38,14 +38,13 @@ pub async fn remove_friend(
 ) -> impl IntoResponse {
     match Friend::remove_friend(&state.pool, request.master_id, request.friend_id).await {
         Ok(_) => {
-            (StatusCode::OK, "好友删除成功").into_response()
+            return (StatusCode::OK, "好友删除成功").into_response();
         }
         Err(e) => {
             error!("❌ [remove_friend] 删除好友失败 - 错误: {}", e);
-            (StatusCode::BAD_REQUEST, "删除好友失败").into_response()
+            return (StatusCode::BAD_REQUEST, "删除好友失败").into_response();
         }
     };
-    (StatusCode::OK, "好友删除成功").into_response()
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -62,6 +61,7 @@ pub async fn get_friends(
                 "master_id": friends.master_id,
                 "friend_ids": friends.friend_ids,
             });
+            info!("✅ [get_friends] 获取好友成功 - 好友: {:?}", json_response);
             (StatusCode::OK, Json(json_response)).into_response()
         }
         Err(e) => {

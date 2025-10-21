@@ -24,7 +24,7 @@ pub async fn add_friend(
             error!("❌ [add_friend] 添加好友失败 - 错误: {}", e);
             return (StatusCode::BAD_REQUEST, "添加好友失败").into_response();
         }
-    };
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -44,7 +44,7 @@ pub async fn remove_friend(
             error!("❌ [remove_friend] 删除好友失败 - 错误: {}", e);
             return (StatusCode::BAD_REQUEST, "删除好友失败").into_response();
         }
-    };
+    }
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -62,11 +62,13 @@ pub async fn get_friends(
                 "friend_ids": friends.friend_ids,
             });
             info!("✅ [get_friends] 获取好友成功 - 好友: {:?}", json_response);
-            (StatusCode::OK, Json(json_response)).into_response()
+            (StatusCode::OK, Json(json_response))
         }
         Err(e) => {
             error!("❌ [get_friends] 获取好友失败 - 错误: {}", e);
-            (StatusCode::BAD_REQUEST, "获取好友失败").into_response()
+            (StatusCode::BAD_REQUEST, Json(json!({
+                "error": e.to_string(),
+            })))
         }
-    };
+    }
 }

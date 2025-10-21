@@ -69,5 +69,4 @@ pub async fn get_friends(
             (StatusCode::BAD_REQUEST, "获取好友失败").into_response()
         }
     };
-    (StatusCode::OK, "获取好友成功").into_response()
 }

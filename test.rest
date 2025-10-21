@@ -112,3 +112,29 @@ Content-Type: application/json
   "player_id": 1,
   "room_id": 1
 }
+
+### 测试添加好友
+POST {{baseUrl}}/addfriend
+Content-Type: application/json
+
+{
+  "master_id": 1,
+  "friend_id": 2
+}
+
+### 测试获取好友
+POST {{baseUrl}}/getfriends
+Content-Type: application/json
+
+{
+  "master_id": 1
+}
+
+### 测试删除好友
+POST {{baseUrl}}/removefriend
+Content-Type: application/json
+
+{
+  "master_id": 1,
+  "friend_id": 2
+}

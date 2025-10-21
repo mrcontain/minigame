@@ -118,8 +118,8 @@ POST {{baseUrl}}/addfriend
 Content-Type: application/json
 
 {
-  "master_id": 1,
-  "friend_id": 3
+  "master_id": 2,
+  "friend_id": 1
 }
 
 ### 测试获取好友
@@ -127,7 +127,7 @@ POST {{baseUrl}}/getfriends
 Content-Type: application/json
 
 {
-  "master_id": 1
+  "master_id": 2
 }
 
 ### 测试删除好友
@@ -135,8 +135,8 @@ POST {{baseUrl}}/removefriend
 Content-Type: application/json
 
 {
-  "master_id": 1,
-  "friend_id": 3
+  "master_id": 4,
+  "friend_id": 1
 }
 
 ### 测试换车
@@ -158,4 +158,13 @@ Content-Type: application/json
   "player_id": 1,
   "car_id": 2,
   "skin_id": 4
+}
+
+### 测试添加玩家
+POST {{baseUrl}}/addplayer
+Content-Type: application/json
+
+{
+  "player_id": 4,
+  "player_name": "玩家4"
 }

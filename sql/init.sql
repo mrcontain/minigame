@@ -7,6 +7,10 @@ CREATE TABLE IF NOT EXISTS friend_mapping (
     friend_id INT NOT NULL,
     PRIMARY KEY (master_id, friend_id)
 );
+-- 外键约束
+ALTER TABLE friend_mapping ADD FOREIGN KEY (master_id) REFERENCES player_info(player_id);
+ALTER TABLE friend_mapping ADD FOREIGN KEY (friend_id) REFERENCES player_info(player_id);
+
 
 
 -- 创建玩家信息表

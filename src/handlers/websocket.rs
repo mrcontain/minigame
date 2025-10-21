@@ -666,7 +666,7 @@ async fn heartbeat_task(
     player_id: i32,
     state:AppState,
 ) {
-    let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(30));
+    let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(5));
     
     loop {
         interval.tick().await;
@@ -675,7 +675,7 @@ async fn heartbeat_task(
         let last_pong =  (*state).last_pong.entry(player_id).or_insert(Instant::now());
         let elapsed = last_pong.elapsed();
         
-        if elapsed > tokio::time::Duration::from_secs(90) {
+        if elapsed > tokio::time::Duration::from_secs(10) {
             // 90秒内没收到 Pong，认为连接已死
             error!("💔 [heartbeat] 90秒内未收到 Pong，连接可能已断开");
             break;

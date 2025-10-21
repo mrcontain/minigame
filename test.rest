@@ -136,5 +136,5 @@ Content-Type: application/json
 
 {
   "master_id": 1,
-  "friend_id": 2
+  "friend_id": 3
 }

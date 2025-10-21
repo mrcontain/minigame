@@ -7,3 +7,11 @@ CREATE TABLE IF NOT EXISTS friend_mapping (
     friend_id INT NOT NULL,
     PRIMARY KEY (master_id, friend_id)
 );
+
+
+-- 创建玩家信息表
+CREATE TABLE IF NOT EXISTS player_info (
+    player_id INT NOT NULL,
+    player_name VARCHAR(255) NOT NULL,
+    PRIMARY KEY (player_id)
+);

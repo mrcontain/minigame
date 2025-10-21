@@ -66,6 +66,7 @@ pub fn get_route(state: AppState) -> Router {
         .route("/addfriend",post(add_friend))
         .route("/removefriend",post(remove_friend))
         .route("/getfriends",post(get_friends))
+        .route("/addplayer",post(add_player))
         .layer(cors)
         .with_state(state)
 }

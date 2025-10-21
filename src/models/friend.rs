@@ -2,10 +2,12 @@ use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 
+use crate::SimplePlayer;
+
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Friend {
     pub master_id: i32,
-    pub friend_ids: Vec<i32>,
+    pub friend_ids: Vec<SimplePlayer>,
 }
 
 impl Friend {
@@ -55,13 +57,15 @@ impl Friend {
     }
 
     pub async fn get_friends(pool: &Pool<Postgres>, master_id: i32) -> Result<Self> {
-        let friend_ids: Vec<i32> = sqlx::query_scalar("SELECT friend_id FROM friend_mapping WHERE master_id = $1")
+        let friend_ids: Vec<SimplePlayer> = sqlx::query_as("SELECT player_id, player_name FROM player_info WHERE player_id IN (SELECT friend_id FROM friend_mapping WHERE master_id = $1)")
             .bind(master_id)
             .fetch_all(pool)
             .await?;
+
         Ok(Self {
             master_id,
             friend_ids,
         })
     }
+
 }

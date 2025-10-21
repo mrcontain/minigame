@@ -644,7 +644,7 @@ pub async fn handle_broadcast_to_ws(
                                                 info!("✅ [broadcast_to_ws] 关闭帧发送成功");
                                             }
                                             Err(e) => {
-                                                error!("❌ [broadcast_to_ws] 关闭帧发送失败: 错误: {e}");
+                                                error!("❌ [broadcast_to_ws] quit_player_id :{quit_player_id} 关闭帧发送失败: 错误: {e}");
                                             }
                                         }
                                         info!("✅ [broadcast_to_ws] 关闭帧发送成功");

@@ -672,13 +672,7 @@ async fn heartbeat_task(
         interval.tick().await;
         
         // 检查上次收到 Pong 的时间
-        let last_pong = match (*state).last_pong.get(&player_id) {
-            Some(last_pong) => last_pong,
-            None => {
-                error!("❌ [heartbeat] 玩家心跳时间不存在");
-                continue;
-            }
-        };
+        let last_pong =  (*state).last_pong.entry(player_id).or_insert(Instant::now());
         let elapsed = last_pong.elapsed();
         
         if elapsed > tokio::time::Duration::from_secs(90) {
@@ -693,5 +687,6 @@ async fn heartbeat_task(
             error!("❌ [heartbeat] Ping 发送失败: {}", e);
             break;
         }
+        drop(last_pong);
     }
 }

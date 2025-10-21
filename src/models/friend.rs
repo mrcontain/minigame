@@ -17,13 +17,21 @@ impl Friend {
     }
 
     pub async fn add_friend(pool: &Pool<Postgres>, master_id: i32, friend_id: i32) -> Result<()> {
-        let result =
+        // 双向添加好友
+        let result1 =
             sqlx::query("INSERT INTO friend_mapping (master_id, friend_id) VALUES ($1, $2)")
                 .bind(master_id)
                 .bind(friend_id)
                 .execute(pool)
                 .await?;
-        if result.rows_affected() == 0 {
+        
+        let result2 =
+            sqlx::query("INSERT INTO friend_mapping (friend_id, master_id) VALUES ($1, $2)")
+                .bind(friend_id)
+                .bind(master_id)
+                .execute(pool)
+                .await?;
+        if result1.rows_affected() == 0 && result2.rows_affected() == 0 {
             return Err(anyhow::anyhow!("添加好友失败"));
         }
         Ok(())

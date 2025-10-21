@@ -28,7 +28,7 @@ impl Friend {
                 .await?;
         
         let result2 =
-            sqlx::query("INSERT INTO friend_mapping (friend_id, master_id) VALUES ($1, $2)")
+            sqlx::query("INSERT INTO friend_mapping (master_id,friend_id) VALUES ($1, $2)")
                 .bind(friend_id)
                 .bind(master_id)
                 .execute(pool)

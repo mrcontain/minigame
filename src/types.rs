@@ -15,6 +15,7 @@ pub struct Room {
 
 pub struct Car {
     pub car_id: i32,
+    pub skin_id: i32,
     pub player_ids:Vec<i32>
 }
 

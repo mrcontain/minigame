@@ -62,6 +62,7 @@ pub fn get_route(state: AppState) -> Router {
         .route("/createroom", post(create_room))
         .route("/quitroom", post(quit_room))
         .route("/changecar",post(change_car))
+        .route("/changecarskin",post(change_car_skin))
         .route("/addfriend",post(add_friend))
         .route("/removefriend",post(remove_friend))
         .route("/getfriends",post(get_friends))

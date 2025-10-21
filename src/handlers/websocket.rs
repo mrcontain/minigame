@@ -156,6 +156,25 @@ pub async fn websocket_handler(
         }
     };
 
+    let Some(skin_id) = paramas.get("skin_id") else {
+        error!("❌ [websocket_handler] 缺少skin_id参数");
+        return (StatusCode::BAD_REQUEST, "缺少skin_id参数").into_response();
+    };
+    debug!(
+        "✅ [websocket_handler] 获取到 skin_id 参数: {}",
+        skin_id
+    );
+    let skin_id = match skin_id.parse::<i32>() {
+        Ok(skin_id) => {
+            debug!("✅ [websocket_handler] skin_id 解析成功: {}", skin_id);
+            skin_id
+        }
+        Err(_) => {
+            error!("❌ [websocket_handler] skin_id参数格式错误: {}", skin_id);
+            return (StatusCode::BAD_REQUEST, "skin_id参数格式错误").into_response();
+        }
+    };
+
     debug!(
         "🚀 [websocket_handler] 所有参数验证成功，准备升级 WebSocket 连接 - player_id: {}, room_id: {}, player_name: {}",
         player_id, room_id, player_name
@@ -170,6 +189,7 @@ pub async fn websocket_handler(
             background_id,
             player_id,
             room_id,
+            skin_id,
             state,
         )
         .await
@@ -185,6 +205,7 @@ async fn handle_websocket(
     background_id: i32,
     player_id: i32,
     room_id: i32,
+    skin_id: i32,
     state: AppState,
 ) {
     debug!(
@@ -226,6 +247,7 @@ async fn handle_websocket(
         debug!("🚗 [handle_websocket] 添加车辆到房间");
         room_info.cars.push(Car {
             car_id,
+            skin_id,
             player_ids: vec![player_id],
         });
         debug!(

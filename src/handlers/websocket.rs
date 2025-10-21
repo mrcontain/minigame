@@ -651,6 +651,7 @@ pub async fn handle_broadcast_to_ws(
                                 Some(room) => room,
                                 None => {
                                     error!("❌ [broadcast_to_ws] 房间不存在");
+                                    break;
                                     // continue;
                                 }
                             };

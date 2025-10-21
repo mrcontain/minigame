@@ -379,7 +379,7 @@ pub async fn handle_ws_to_broadcast(
 
     // 文本帧使用 json 交互
     while let Some(Ok(msg)) = ws_stream.next().await {
-        debug!("📨 [ws_to_broadcast] 收到 WebSocket 消息: {:?}", msg);
+        // debug!("📨 [ws_to_broadcast] 收到 WebSocket 消息: {:?}", msg);
 
         match msg {
             Message::Text(text) => {

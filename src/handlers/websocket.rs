@@ -1,4 +1,11 @@
-use std::{collections::HashMap, sync::Arc, time::Instant};
+use std::{
+    collections::HashMap,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Instant,
+};
 
 use axum::{
     extract::{
@@ -160,10 +167,7 @@ pub async fn websocket_handler(
         error!("❌ [websocket_handler] 缺少skin_id参数");
         return (StatusCode::BAD_REQUEST, "缺少skin_id参数").into_response();
     };
-    debug!(
-        "✅ [websocket_handler] 获取到 skin_id 参数: {}",
-        skin_id
-    );
+    debug!("✅ [websocket_handler] 获取到 skin_id 参数: {}", skin_id);
     let skin_id = match skin_id.parse::<i32>() {
         Ok(skin_id) => {
             debug!("✅ [websocket_handler] skin_id 解析成功: {}", skin_id);
@@ -305,12 +309,15 @@ async fn handle_websocket(
     let content = format!("{}登录了房间", player_name);
     debug!("📢 [handle_websocket] 准备广播登录消息: {}", content);
 
+    let heart_timeout_notify = Arc::new(AtomicBool::new(false));
+
     // 群发信息 - 启动接收任务
     let ws_to_broadcast = tokio::spawn(handle_ws_to_broadcast(
         ws_stream,
         tx.clone(),
         room_id,
         player_id,
+        heart_timeout_notify.clone(),
         state.clone(),
     ));
 
@@ -325,7 +332,12 @@ async fn handle_websocket(
     let room_info_clone = room_info.clone();
     drop(room_info);
 
-    let heartbeat_task = tokio::spawn(heartbeat_task(arc_ws_sink, player_id, state.clone()));
+    let heartbeat_task = tokio::spawn(heartbeat_task(
+        arc_ws_sink,
+        player_id,
+        heart_timeout_notify.clone(),
+        state.clone(),
+    ));
     match tx.send(MessageType::Sync(room_info_clone)) {
         Ok(_) => {
             debug!("✅ [broadcast_to_ws] 登录消息广播成功");
@@ -396,6 +408,7 @@ pub async fn handle_ws_to_broadcast(
     tx: tokio::sync::broadcast::Sender<MessageType>,
     room_id: i32,
     player_id: i32,
+    heart_timeout_notify: Arc<AtomicBool>,
     state: AppState,
 ) {
     debug!("🚀 [ws_to_broadcast] 启动 WebSocket 接收任务");
@@ -403,7 +416,10 @@ pub async fn handle_ws_to_broadcast(
     // 文本帧使用 json 交互
     while let Some(Ok(msg)) = ws_stream.next().await {
         // debug!("📨 [ws_to_broadcast] 收到 WebSocket 消息: {:?}", msg);
-
+        if heart_timeout_notify.load(Ordering::Relaxed) {
+            debug!("💔 [ws_to_broadcast] 心跳超时，通知客户端关闭连接");
+            break;
+        }
         match msg {
             Message::Text(text) => {
                 debug!("📝 [ws_to_broadcast] 收到文本消息: {}", text);
@@ -730,8 +746,9 @@ pub async fn handle_broadcast_to_ws(
 
 // 心跳任务
 async fn heartbeat_task(
-    mut ws_sink: Arc<Mutex<futures::stream::SplitSink<WebSocket, Message>>>,
+    ws_sink: Arc<Mutex<futures::stream::SplitSink<WebSocket, Message>>>,
     player_id: i32,
+    heart_timeout_notify: Arc<AtomicBool>,
     state: AppState,
 ) {
     let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(5));
@@ -749,6 +766,7 @@ async fn heartbeat_task(
         if elapsed > tokio::time::Duration::from_secs(10) {
             // 90秒内没收到 Pong，认为连接已死
             error!("💔 [heartbeat] 90秒内未收到 Pong，连接可能已断开");
+            heart_timeout_notify.store(true, Ordering::Relaxed);
             // (*state).last_pong.remove(&player_id);
             // drop(last_pong);
             break;

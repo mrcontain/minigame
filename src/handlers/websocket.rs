@@ -418,6 +418,48 @@ pub async fn handle_ws_to_broadcast(
         // debug!("📨 [ws_to_broadcast] 收到 WebSocket 消息: {:?}", msg);
         if heart_timeout_notify.load(Ordering::Relaxed) {
             debug!("💔 [ws_to_broadcast] 心跳超时，通知客户端关闭连接");
+            if room_id == player_id {
+                let player_ids: Vec<i32> = {
+                    let room_info = match (*state).room_info.get(&room_id) {
+                        Some(room) => room,
+                        None => {
+                            error!("❌ [ws_to_broadcast] 房间不存在");
+                            break;
+                        }
+                    };
+
+                    room_info.players.iter().map(|p| p.player_id).collect()
+                };
+
+                for pid in player_ids {
+                    if pid != player_id {
+                        (*state).normal_quit_room.insert(pid, ());
+                    }
+                    match tx.send(MessageType::Quit(pid, room_id)) {
+                        Ok(_) => {
+                            debug!(
+                                "✅ [ws_to_broadcast] 退出消息广播成功 - player_id: {}",
+                                pid
+                            );
+                        }
+                        Err(e) => {
+                            error!("❌ [ws_to_broadcast] 退出消息广播失败: 错误: {e}");
+                        }
+                    }
+                }
+            } else {
+                match tx.send(MessageType::Quit(player_id, room_id)) {
+                    Ok(_) => {
+                        debug!(
+                            "✅ [ws_to_broadcast] 退出消息广播成功 - player_id: {}",
+                            player_id
+                        );
+                    }
+                    Err(e) => {
+                        error!("❌ [ws_to_broadcast] 退出消息广播失败: 错误: {e}");
+                    }
+                }
+            }
             break;
         }
         match msg {

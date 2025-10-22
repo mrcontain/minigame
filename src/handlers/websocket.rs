@@ -749,6 +749,7 @@ async fn heartbeat_task(
         if elapsed > tokio::time::Duration::from_secs(10) {
             // 90秒内没收到 Pong，认为连接已死
             error!("💔 [heartbeat] 90秒内未收到 Pong，连接可能已断开");
+            (*state).last_pong.remove(&player_id);
             break;
         }
 
@@ -761,6 +762,7 @@ async fn heartbeat_task(
             .await
         {
             error!("❌ [heartbeat] Ping 发送失败: {}", e);
+            (*state).last_pong.remove(&player_id);
             break;
         }
         drop(last_pong);

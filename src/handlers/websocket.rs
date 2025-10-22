@@ -750,6 +750,7 @@ async fn heartbeat_task(
             // 90秒内没收到 Pong，认为连接已死
             error!("💔 [heartbeat] 90秒内未收到 Pong，连接可能已断开");
             (*state).last_pong.remove(&player_id);
+            drop(last_pong);
             break;
         }
 
@@ -763,6 +764,7 @@ async fn heartbeat_task(
         {
             error!("❌ [heartbeat] Ping 发送失败: {}", e);
             (*state).last_pong.remove(&player_id);
+            drop(last_pong);
             break;
         }
         drop(last_pong);

@@ -823,6 +823,7 @@ async fn heartbeat_task(
             .await
         {
             error!("❌ [heartbeat] Ping 发送失败: {}", e);
+            heart_timeout_notify.store(true, Ordering::Relaxed);
             // (*state).last_pong.remove(&player_id);
             // drop(last_pong);
             break;

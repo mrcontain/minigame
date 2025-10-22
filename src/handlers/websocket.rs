@@ -399,6 +399,7 @@ async fn handle_websocket(
         debug!("🗑️ [handle_websocket] 房间 {} 已清空并删除", room_id);
     }
     (*state).normal_quit_room.remove(&player_id);
+    (*state).last_pong.remove(&player_id);
     debug!("👋 [handle_websocket] WebSocket 连接处理完成");
 }
 

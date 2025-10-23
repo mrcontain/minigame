@@ -349,6 +349,7 @@ async fn handle_websocket(
 
     // 等待任一任务结束
     debug!("⏳ [handle_websocket] 等待任务结束...");
+    drop(room);
     match tokio::join!(ws_to_broadcast, broadcast_to_ws, heartbeat_task) {
         (Ok(_), Ok(_), Ok(_)) => {
             debug!("🛑 [handle_websocket] 所有任务已结束");
@@ -374,7 +375,6 @@ async fn handle_websocket(
         }
     }
     debug!("room_id :{room_id} player_id :{player_id}");
-    drop(room);
     // 清理：从房间中移除玩家
     if room_id == player_id {
         match (*state).room_broadcast_couple.remove(&room_id) {
